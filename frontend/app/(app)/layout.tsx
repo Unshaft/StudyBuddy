@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { BottomNav } from '@/components/layout/bottom-nav'
+import { AuthInit } from '@/components/auth/auth-init'
 
 export default async function AppLayout({
   children,
@@ -18,6 +19,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
+      <AuthInit />
       {children}
       <BottomNav />
     </div>

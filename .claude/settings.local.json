@@ -7,7 +7,9 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(npm install:*)",
       "Bash(python3:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(cat:*)",
+      "Bash(\"C:\\\\Perso\\\\Code Perso\\\\StudyBuddy\\\\StudyBuddy\\\\frontend\\\\app\\\\\\(app\\)\\\\layout.tsx\":*)"
     ]
   }
 }

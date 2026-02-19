@@ -5,6 +5,15 @@ const pwa = withPWA({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
+  workboxOptions: {
+    runtimeCaching: [
+      {
+        // Ne jamais mettre en cache les appels API Railway
+        urlPattern: /^https:\/\/.*\.railway\.app\/.*/i,
+        handler: 'NetworkOnly',
+      },
+    ],
+  },
 })
 
 /** @type {import('next').NextConfig} */

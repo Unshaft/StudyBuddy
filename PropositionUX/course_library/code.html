@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Course Library - Student AI Assistant</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b8cee",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<!-- Top Navigation Bar (iOS Style) -->
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 ios-blur px-4 pt-12 pb-4 border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-2xl font-bold">school</span>
+</div>
+<h1 class="text-2xl font-bold tracking-tight">Library</h1>
+</div>
+<div class="flex gap-2">
+<button class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">search</span>
+</button>
+<button class="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">more_horiz</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content -->
+<main class="flex-1 px-4 py-6 space-y-8 pb-32">
+<!-- Hero Action: Add New Course -->
+<section>
+<button class="w-full group relative overflow-hidden bg-primary p-6 rounded-2xl shadow-lg shadow-primary/20 flex flex-col items-center justify-center gap-3 active:scale-[0.98] transition-all">
+<div class="absolute inset-0 bg-gradient-to-tr from-primary via-primary to-blue-400 opacity-50"></div>
+<div class="relative z-10 w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md mb-2">
+<span class="material-symbols-outlined text-white text-4xl">add_a_photo</span>
+</div>
+<div class="relative z-10 text-center">
+<h2 class="text-xl font-bold text-white">Add New Course</h2>
+<p class="text-white/80 text-sm mt-1">Scan your notes to start learning with AI</p>
+</div>
+</button>
+</section>
+<!-- Stats Row -->
+<section class="grid grid-cols-2 gap-3">
+<div class="bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider leading-none mb-1">Total Notes</p>
+<p class="text-2xl font-bold text-primary">124 <span class="text-sm font-normal text-slate-400">pages</span></p>
+</div>
+<div class="bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider leading-none mb-1">AI Ready</p>
+<p class="text-2xl font-bold text-emerald-500">8 <span class="text-sm font-normal text-slate-400">subjects</span></p>
+</div>
+</section>
+<!-- My Subjects Grid -->
+<section>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-bold tracking-tight">My Subjects</h3>
+<button class="text-primary text-sm font-semibold">View All</button>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<!-- Subject Card: Math -->
+<div class="flex flex-col gap-2 group">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+<div class="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-105" data-alt="Handwritten calculus notes on a whiteboard" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDQRVURJRdRDMeVZmhaHYzK5oN-sa1dmuPOFcRiKcMQTuRNQSwBxgZ3y0A6-zYoxW5CcAAuX0erYJbvrbuy7U9YVX6SxDtu3ctvKWY244DqbyjIU4N0X-r5u4S9o7ZhDbN4A5MeEpbpwbBHkYOQxJ918KB0hF57eSu7LsRA1SBqZQk7dHsTzsJPGZBCYg_C9fpw6ncwfGRbH4Tb5aksV0rR13k4CsfP7xKmn-YWBttQfMuCsF2KEYunQ4P-tvIn-aT3j-Cuzts2YRye");'></div>
+<div class="absolute top-2 right-2 bg-primary px-2 py-1 rounded-lg text-[10px] font-bold text-white uppercase tracking-tighter">
+                            12 Pages
+                        </div>
+</div>
+<div>
+<h4 class="font-bold text-base leading-tight">Mathematics</h4>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[14px] text-slate-400">schedule</span>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium">Updated 2h ago</p>
+</div>
+</div>
+</div>
+<!-- Subject Card: Physics -->
+<div class="flex flex-col gap-2 group">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+<div class="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-105" data-alt="Technical diagrams of electric circuits" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDVWz6EWrfNEQ-Jj5bpPZSjpA7FXlwHHrvCUCfeAgwA7c8vZ25u2ZtLgBJGiM0AF3Mdq9EZxjtX8kXzGIMr8ciLlH5dH66jaldAFm_Y-8Yy4dctLv0tDZpyhwaTg4eEYvwVxr0gl04byYib0nGz0-Ag6h1KZQyGfH1mAaW_I0_BUMDjttohoA-rLbyacoUEoeRFYYpYw_28VxCOz7Umil-0UTmIVFQi2SKZAXZyeJpFpoaf3fnnMyr1mynSlenXBKYBQLLRbU9NryPe");'></div>
+<div class="absolute top-2 right-2 bg-primary px-2 py-1 rounded-lg text-[10px] font-bold text-white uppercase tracking-tighter">
+                            8 Pages
+                        </div>
+</div>
+<div>
+<h4 class="font-bold text-base leading-tight">Physics</h4>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[14px] text-slate-400">schedule</span>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium">Yesterday</p>
+</div>
+</div>
+</div>
+<!-- Subject Card: History -->
+<div class="flex flex-col gap-2 group">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+<div class="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-105" data-alt="Old paper documents with cursive handwriting" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBVgQ6LlgOQwlUAbNZwP2zOJD5QCUz396B1iWcNKbxidBDl7wUqKdpTHwMdkzExh6QjhYrWanX_lnX8Nu8TmEnIVKcvsJ54heEOp6SHAaG7_B8CngpZpQkKZejV2eiPvuf2DipmmRCQCr6vJSIupG8HH-cuJkwPB264wFoU-f-05K7liN1eOEqmW-weXxYXwHceaPleA8DlIYfzF1H0HAQn-45dF-vKC7zaKI3RupS8MsW3hwIIlfHj2Dmbl05Td-6xxqKuDd1dMzH_");'></div>
+<div class="absolute top-2 right-2 bg-primary px-2 py-1 rounded-lg text-[10px] font-bold text-white uppercase tracking-tighter">
+                            24 Pages
+                        </div>
+</div>
+<div>
+<h4 class="font-bold text-base leading-tight">World History</h4>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[14px] text-slate-400">schedule</span>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium">3 days ago</p>
+</div>
+</div>
+</div>
+<!-- Subject Card: Chemistry -->
+<div class="flex flex-col gap-2 group">
+<div class="relative aspect-[4/3] rounded-xl overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+<div class="absolute inset-0 bg-cover bg-center transition-transform group-hover:scale-105" data-alt="Chemical molecular structures drawn on paper" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDeC9tJrpgCxTcrXAzts0nB_WBOfWsbTfwqlNccFRm54JJXeyZDuMe5wMm68XauFnVcWcKMhXKU5PumtAcwmJlacvbF0nZZr4v7uzAhC24qDtwO8tY4q8dBK5zGocM-Felk0iirPhlfkbVQsLxWjSfrZndhdrYNcfv0H2gX4VBO6ukHreRehODvNtkvsmRVJUgbPgW-9VovVfC_fnudJsn9wRF25ubVb7IRFc8xd2OP5Zaw25rJZJTwdhha2KqgNtlZzxAykXi3jUMu");'></div>
+<div class="absolute top-2 right-2 bg-primary px-2 py-1 rounded-lg text-[10px] font-bold text-white uppercase tracking-tighter">
+                            15 Pages
+                        </div>
+</div>
+<div>
+<h4 class="font-bold text-base leading-tight">Chemistry</h4>
+<div class="flex items-center gap-1.5 mt-1">
+<span class="material-symbols-outlined text-[14px] text-slate-400">schedule</span>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-medium">Oct 12</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar (iOS Style) -->
+<nav class="fixed bottom-0 left-0 right-0 bg-background-light/90 dark:bg-background-dark/90 ios-blur border-t border-slate-200 dark:border-slate-800 pb-8 pt-2 px-6">
+<div class="max-w-md mx-auto flex items-center justify-between">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-[1] text-2xl">folder_open</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Library</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">chat</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">AI Chat</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-400 dark:text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">person</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Profile</span>
+</a>
+</div>
+</nav>
+</body></html>

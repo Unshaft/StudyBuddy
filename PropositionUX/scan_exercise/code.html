@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scan Exercise - Homework Helper</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b8cee",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        .viewfinder-corners {
+            position: absolute;
+            inset: 2rem;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 1rem;
+            pointer-events: none;
+        }
+        .corner-bracket {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #2b8cee;
+        }
+        .top-left { top: -2px; left: -2px; border-right: 0; border-bottom: 0; border-top-left-radius: 12px; }
+        .top-right { top: -2px; right: -2px; border-left: 0; border-bottom: 0; border-top-right-radius: 12px; }
+        .bottom-left { bottom: -2px; left: -2px; border-right: 0; border-top: 0; border-bottom-left-radius: 12px; }
+        .bottom-right { bottom: -2px; right: -2px; border-left: 0; border-top: 0; border-bottom-right-radius: 12px; }
+        
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 antialiased overflow-hidden">
+<div class="relative flex h-screen w-full flex-col max-w-[430px] mx-auto bg-background-dark shadow-2xl">
+<!-- Header -->
+<header class="flex items-center justify-between px-6 pt-12 pb-4 z-10">
+<button class="flex items-center justify-center size-10 rounded-full bg-slate-800/40 backdrop-blur-md">
+<span class="material-symbols-outlined text-slate-100">close</span>
+</button>
+<h1 class="text-lg font-semibold tracking-tight text-slate-100">Scan Exercise</h1>
+<button class="flex items-center justify-center size-10 rounded-full bg-slate-800/40 backdrop-blur-md">
+<span class="material-symbols-outlined text-slate-100">help</span>
+</button>
+</header>
+<!-- Main Camera Viewfinder Area -->
+<main class="relative flex-1 px-4 flex flex-col items-center justify-center">
+<div class="relative w-full aspect-[3/4] rounded-2xl overflow-hidden bg-slate-900 shadow-inner group">
+<!-- Mock Camera Feed Background -->
+<div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-950 opacity-80" data-alt="Dark abstract background representing active camera lens"></div>
+<!-- Scanning animation/guides -->
+<div class="viewfinder-corners">
+<div class="corner-bracket top-left"></div>
+<div class="corner-bracket top-right"></div>
+<div class="corner-bracket bottom-left"></div>
+<div class="corner-bracket bottom-right"></div>
+</div>
+<!-- Guidance Overlay -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<div class="bg-black/20 backdrop-blur-sm px-6 py-3 rounded-xl border border-white/10">
+<p class="text-white text-sm font-medium">Align text within the frame</p>
+</div>
+</div>
+<!-- Lighting Control -->
+<div class="absolute top-4 right-4 flex flex-col gap-3">
+<button class="size-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10">
+<span class="material-symbols-outlined text-[20px]">flashlight_on</span>
+</button>
+</div>
+</div>
+<div class="mt-6 text-center">
+<h2 class="text-xl font-bold text-slate-100">Scan your exercise to get help</h2>
+<p class="text-slate-400 text-sm mt-1">AI will analyze based on your course notes</p>
+</div>
+</main>
+<!-- Subject Selection & Controls -->
+<section class="px-6 pb-10 space-y-6">
+<!-- Subject Selector Segmented Control -->
+<div class="flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<span class="text-xs font-bold uppercase tracking-widest text-slate-500">Active Course Notes</span>
+<span class="text-xs font-medium text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">auto_stories</span>
+                        8 Files Linked
+                    </span>
+</div>
+<div class="flex bg-slate-800/50 p-1 rounded-xl overflow-x-auto hide-scrollbar gap-1 border border-slate-700/50">
+<label class="flex-none cursor-pointer">
+<input checked="" class="sr-only peer" name="subject" type="radio"/>
+<div class="px-5 py-2 rounded-lg peer-checked:bg-primary peer-checked:text-white text-slate-400 text-sm font-medium transition-all duration-200">
+                            Math
+                        </div>
+</label>
+<label class="flex-none cursor-pointer">
+<input class="sr-only peer" name="subject" type="radio"/>
+<div class="px-5 py-2 rounded-lg peer-checked:bg-primary peer-checked:text-white text-slate-400 text-sm font-medium transition-all duration-200">
+                            Physics
+                        </div>
+</label>
+<label class="flex-none cursor-pointer">
+<input class="sr-only peer" name="subject" type="radio"/>
+<div class="px-5 py-2 rounded-lg peer-checked:bg-primary peer-checked:text-white text-slate-400 text-sm font-medium transition-all duration-200">
+                            History
+                        </div>
+</label>
+<label class="flex-none cursor-pointer">
+<input class="sr-only peer" name="subject" type="radio"/>
+<div class="px-5 py-2 rounded-lg peer-checked:bg-primary peer-checked:text-white text-slate-400 text-sm font-medium transition-all duration-200">
+                            Biology
+                        </div>
+</label>
+<label class="flex-none cursor-pointer">
+<input class="sr-only peer" name="subject" type="radio"/>
+<div class="px-5 py-2 rounded-lg peer-checked:bg-primary peer-checked:text-white text-slate-400 text-sm font-medium transition-all duration-200">
+                            Chemistry
+                        </div>
+</label>
+</div>
+</div>
+<!-- Capture Actions -->
+<div class="flex items-center justify-between">
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<div class="size-12 rounded-full border border-slate-700 flex items-center justify-center hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">image</span>
+</div>
+<span class="text-[10px] font-medium uppercase tracking-tighter">Gallery</span>
+</button>
+<!-- Shutter Button -->
+<button class="relative group">
+<div class="absolute -inset-2 bg-primary/20 rounded-full blur-lg opacity-0 group-active:opacity-100 transition-opacity"></div>
+<div class="size-20 rounded-full border-[4px] border-white flex items-center justify-center p-1 bg-transparent active:scale-95 transition-transform">
+<div class="size-full rounded-full bg-white"></div>
+</div>
+</button>
+<button class="flex flex-col items-center gap-1 text-slate-400">
+<div class="size-12 rounded-full border border-slate-700 flex items-center justify-center hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">text_fields</span>
+</div>
+<span class="text-[10px] font-medium uppercase tracking-tighter">Type</span>
+</button>
+</div>
+</section>
+<!-- Bottom Tab Bar -->
+<nav class="border-t border-slate-800 bg-background-dark/80 backdrop-blur-xl px-6 pt-3 pb-8 flex justify-between items-center z-20">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-symbols-outlined fill-1">photo_camera</span>
+<span class="text-[10px] font-semibold">Scan</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300" href="#">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="text-[10px] font-semibold">Notes</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300" href="#">
+<span class="material-symbols-outlined">forum</span>
+<span class="text-[10px] font-semibold">AI Tutor</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-semibold">Profile</span>
+</a>
+</nav>
+<!-- iOS Home Indicator Notch Mockup -->
+<div class="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-32 h-1 rounded-full bg-white/20"></div>
+</div>
+</body></html>

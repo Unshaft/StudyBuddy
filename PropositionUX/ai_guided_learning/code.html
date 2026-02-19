@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Guided Learning</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#2b8cee",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#101922",
+                    },
+                    fontFamily: {
+                        "display": ["Lexend", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Lexend', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
+<div class="relative flex flex-col h-screen w-full max-w-md mx-auto overflow-hidden bg-background-light dark:bg-background-dark">
+<!-- Top Navigation Bar -->
+<header class="flex items-center justify-between p-4 bg-background-light dark:bg-background-dark border-b border-slate-200 dark:border-slate-800 shrink-0">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary cursor-pointer">arrow_back_ios</span>
+<div>
+<h1 class="text-lg font-bold leading-tight">Solving for X</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400">Algebra I • Step 2 of 5</p>
+</div>
+</div>
+<div class="size-10 rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700 bg-slate-200 dark:bg-slate-800">
+<img class="w-full h-full object-cover" data-alt="Thumbnail of a handwritten math problem on a worksheet" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXCpAutT1tm9J-nNJuLQxy5Rsjw7eLy_74zlQouO-MiuzAc1-nCvShzzO1X07PulSWU1dsqb-SMX-WIxOlC95qXeEnSR6lpM8t2skdV19dRIivQqgd89SIO5FoeP-OCooK7aQ50lPev-Pqv0Wq7c0vVGub2sD7GRZxmLKiUYxssHA99cqGkl0vL-qpExfXwObR3x_j420Sp6b9wkxRaWxy0LRHW2Eq5bR85SrAIw6uwxD8qzf3rWSLpDZnxln7dDLTNge2P13TT97d"/>
+</div>
+</header>
+<!-- Progress Indicator -->
+<div class="px-4 py-2 bg-slate-50 dark:bg-slate-900/50">
+<div class="flex justify-between items-center mb-1">
+<span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Lesson Progress</span>
+<span class="text-[10px] font-semibold text-primary">40%</span>
+</div>
+<div class="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="h-full bg-primary" style="width: 40%;"></div>
+</div>
+</div>
+<!-- Chat Area -->
+<main class="flex-1 overflow-y-auto p-4 space-y-6 flex flex-col">
+<!-- AI Message -->
+<div class="flex items-start gap-3 max-w-[85%]">
+<div class="size-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-sm">smart_toy</span>
+</div>
+<div class="space-y-2">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">AI Tutor</p>
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl rounded-tl-none shadow-sm border border-slate-200 dark:border-slate-700">
+<p class="text-sm leading-relaxed">
+                            Let's look at this problem. Based on your <span class="text-primary font-medium">Math notes from Tuesday</span>, you mentioned that "the first step is to isolate the variable". How would you apply that here?
+                        </p>
+</div>
+<!-- Reference Card -->
+<div class="flex items-center gap-3 p-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+<div class="size-12 rounded bg-slate-200 dark:bg-slate-800 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Snippet of handwritten notebook page with algebra notes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmdh6sZUPiCxjZ-ra0wHnTyUYNi3MebvFAKB1wTrHjJyQQLs6fH_NlVlXNlVGhGWcs41Qiw8K-Fk6eyMrPC5anf0K5DyGoQbKHgYEUUPVq_2BCsDYgELfnLOpTFNWhYP_4lNCaqUjDLJ_YpLJOufdceg_cSc5dLQ4Ms7aH3Nba1k06HsdTTu5DaheMeuy8ncKREU8AyWF57etd-HiPmJb1dZ1MmOjIcOriK_SC-v1MgjVXbJmAm3_v_mgS1FHTkhTr-OwTwyRF2A8p"/>
+</div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-bold truncate">Tuesday's Algebra Notes</p>
+<p class="text-[10px] text-slate-500">Page 2 • Concept: Isolating Variables</p>
+</div>
+<span class="material-symbols-outlined text-slate-400 text-lg">open_in_full</span>
+</div>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex flex-col items-end gap-2 self-end max-w-[85%]">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 mr-1">Me</p>
+<div class="bg-primary text-white p-4 rounded-xl rounded-tr-none shadow-md">
+<p class="text-sm">Should I subtract 5 from both sides first?</p>
+</div>
+</div>
+<!-- AI Message 2 -->
+<div class="flex items-start gap-3 max-w-[85%]">
+<div class="size-8 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary text-sm">smart_toy</span>
+</div>
+<div class="space-y-2">
+<p class="text-xs font-medium text-slate-500 dark:text-slate-400 ml-1">AI Tutor</p>
+<div class="bg-white dark:bg-slate-800 p-4 rounded-xl rounded-tl-none shadow-sm border border-slate-200 dark:border-slate-700">
+<p class="text-sm leading-relaxed">
+                            Exactly! Your notes on page 2 show a similar example. Give it a try and let me know the result.
+                        </p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-[11px] font-medium border border-slate-200 dark:border-slate-700">
+                            I got 12
+                        </button>
+<button class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-[11px] font-medium border border-slate-200 dark:border-slate-700">
+                            I'm stuck
+                        </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Input Area -->
+<footer class="p-4 bg-background-light dark:bg-background-dark border-t border-slate-200 dark:border-slate-800 space-y-4">
+<!-- Suggested Actions -->
+<div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-full text-xs font-medium whitespace-nowrap">
+<span class="material-symbols-outlined text-sm">lightbulb</span>
+                    Give me a hint
+                </span>
+<span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-medium whitespace-nowrap">
+<span class="material-symbols-outlined text-sm">menu_book</span>
+                    See related notes
+                </span>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-full">
+<span class="material-symbols-outlined">add</span>
+</button>
+<div class="relative flex-1">
+<input class="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-full py-3 px-5 text-sm focus:ring-2 focus:ring-primary text-slate-900 dark:text-slate-100" placeholder="Ask a follow-up question..." type="text"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-primary text-white rounded-full">
+<span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+<button class="p-2 text-slate-500 dark:text-slate-400">
+<span class="material-symbols-outlined">mic</span>
+</button>
+</div>
+<!-- Safe Area Indicator (iOS) -->
+<div class="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto opacity-20"></div>
+</footer>
+</div>
+</body></html>

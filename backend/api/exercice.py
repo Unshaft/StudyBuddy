@@ -9,6 +9,7 @@ import json
 import logging
 import uuid
 
+import anthropic
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -30,6 +31,7 @@ from config import get_settings
 logger = logging.getLogger("studybuddy.exercice")
 router = APIRouter()
 settings = get_settings()
+async_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
@@ -250,6 +252,79 @@ async def correct_exercise_stream(
             "specialist": routed_subject,
             "level": routed_level,
         })
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/followup/stream")
+async def followup_stream(
+    user_id: str = Form(...),
+    routed_subject: str = Form(...),
+    level: str = Form(...),
+    conversation_history: str = Form(...),  # JSON: [{role, content}, ...]
+    message: str = Form(...),
+):
+    """
+    Conversation de suivi post-correction — human in the loop.
+    L'élève pose une question de clarification ; le spécialiste répond
+    en s'appuyant sur les mêmes extraits de cours (nouveau RAG query).
+    """
+    async def generate():
+        def sse(data: dict) -> str:
+            return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+        # Historique de conversation
+        try:
+            history: list[dict] = json.loads(conversation_history)
+        except Exception:
+            history = []
+
+        # RAG : nouveaux chunks pertinents pour la question de l'élève
+        try:
+            chunks = await search_relevant_chunks(
+                query=message,
+                user_id=user_id,
+                subject=routed_subject,
+                top_k=settings.specialist_top_k,
+            )
+        except Exception as e:
+            logger.warning("[FOLLOWUP] RAG ERREUR: %s", e)
+            chunks = []
+
+        chunks_dicts = [
+            {
+                "content": c.content, "course_title": c.course_title,
+                "subject": c.subject, "similarity": c.similarity,
+                "chunk_index": c.chunk_index, "course_id": c.course_id,
+            }
+            for c in chunks
+        ]
+
+        # System prompt via le spécialiste correspondant
+        specialist = _SPECIALISTS.get(routed_subject, _SPECIALISTS["mathematiques"])
+        temp_state: dict = {"routed_level": level, "retrieved_chunks": chunks_dicts}
+        system_prompt = specialist.build_system_prompt(temp_state)  # type: ignore[arg-type]
+
+        # Messages : historique + nouvelle question
+        messages = history + [{"role": "user", "content": message}]
+
+        logger.info("[FOLLOWUP] user=%s subject=%s history=%d", user_id, routed_subject, len(history))
+        yield sse({"type": "start"})
+
+        async with async_client.messages.stream(
+            model=settings.correction_model,
+            max_tokens=settings.specialist_max_tokens,
+            system=system_prompt,
+            messages=messages,
+        ) as stream:
+            async for text in stream.text_stream:
+                yield sse({"type": "token", "text": text})
+
+        yield sse({"type": "done"})
 
     return StreamingResponse(
         generate(),

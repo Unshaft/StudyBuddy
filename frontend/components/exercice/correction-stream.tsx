@@ -24,7 +24,7 @@ const PHASES: PhaseStep[] = [
 
 const PHASE_ORDER: CorrectionPhase[] = ['ocr', 'rag', 'specialist', 'evaluating', 'done']
 
-interface CorrectionStreamProps {
+export interface CorrectionStreamProps {
   phase: CorrectionPhase
   tokens: string
   subject: string | null
@@ -34,6 +34,57 @@ interface CorrectionStreamProps {
   evaluationScore: number
   sessionId: string | null
   error: string | null
+  /** Appelé quand l'élève clique "J'ai compris" ou "J'ai une question" */
+  onFollowup?: (understood: boolean) => void
+  /** True si la conversation de suivi a déjà commencé */
+  followupStarted?: boolean
+}
+
+/** Découpe le texte de correction en paragraphes (bulles séparées) */
+function splitIntoBubbles(text: string): string[] {
+  return text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0)
+}
+
+/** Bulle de message IA */
+export function BotBubble({
+  content,
+  isStreaming = false,
+}: {
+  content: string
+  isStreaming?: boolean
+}) {
+  return (
+    <div className="flex gap-2.5 items-start">
+      <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm shadow-indigo-200">
+        <Bot className="w-4 h-4 text-white" strokeWidth={2} />
+      </div>
+      <div className="flex-1 min-w-0 bg-white border border-slate-100 rounded-xl rounded-tl-none px-4 py-3 shadow-sm">
+        <div className="prose prose-sm max-w-none">
+          <MathRenderer
+            content={content}
+            className="text-slate-800 leading-relaxed text-sm"
+          />
+          {isStreaming && (
+            <span className="inline-block w-0.5 h-4 bg-indigo-500 ml-0.5 animate-pulse align-middle" />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Bulle de message utilisateur */
+export function UserBubble({ content }: { content: string }) {
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-[80%] bg-indigo-600 text-white rounded-xl rounded-tr-none px-4 py-3 shadow-sm">
+        <p className="text-sm leading-relaxed">{content}</p>
+      </div>
+    </div>
+  )
 }
 
 export function CorrectionStream({
@@ -43,9 +94,10 @@ export function CorrectionStream({
   level,
   specialist,
   sources,
-  evaluationScore,
   sessionId,
   error,
+  onFollowup,
+  followupStarted = false,
 }: CorrectionStreamProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const currentPhaseIndex = PHASE_ORDER.indexOf(phase)
@@ -54,7 +106,7 @@ export function CorrectionStream({
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [tokens, phase])
 
-  // Error state
+  // ── Error ──────────────────────────────────────────────────────────────────
   if (phase === 'error') {
     return (
       <div className="flex flex-col items-center gap-4 py-8 text-center">
@@ -69,19 +121,29 @@ export function CorrectionStream({
     )
   }
 
+  const bubbles = phase === 'done' ? splitIntoBubbles(tokens) : null
+
   return (
     <div className="flex flex-col gap-3">
 
-      {/* Phase tracker — only while processing */}
+      {/* ── Phase tracker ─────────────────────────────────────────────────── */}
       {phase !== 'done' && (
         <div className="bg-white rounded-2xl border border-slate-100 p-4">
+          {(subject || level) && (
+            <div className="flex items-center gap-1.5 mb-3 pb-3 border-b border-slate-50">
+              {subject && <SubjectBadge subject={subject} />}
+              {level && <span className="text-xs text-slate-400">{level}</span>}
+              {specialist && (
+                <span className="text-[10px] text-slate-400 ml-auto">Agent {specialist}</span>
+              )}
+            </div>
+          )}
           <div className="space-y-2.5">
             {PHASES.map((step) => {
               const stepIndex = PHASE_ORDER.indexOf(step.id)
               const isDone = currentPhaseIndex > stepIndex
               const isActive = currentPhaseIndex === stepIndex
               const isPending = currentPhaseIndex < stepIndex
-
               return (
                 <div key={step.id} className="flex items-center gap-3">
                   <div className={cn(
@@ -110,13 +172,9 @@ export function CorrectionStream({
                   </span>
                   {isActive && (
                     <div className="flex gap-1">
-                      {[0, 1, 2].map((n) => (
-                        <span
-                          key={n}
-                          className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"
-                          style={{ animationDelay: `${n * 150}ms` }}
-                        />
-                      ))}
+                      <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" />
+                      <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                      <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:300ms]" />
                     </div>
                   )}
                 </div>
@@ -126,91 +184,66 @@ export function CorrectionStream({
         </div>
       )}
 
-      {/* AI message bubble — shows during/after streaming */}
-      {(tokens || phase === 'specialist') && (
-        <div className="flex gap-2.5 items-start">
-          {/* Bot avatar */}
-          <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm shadow-indigo-200">
-            <Bot className="w-4 h-4 text-white" strokeWidth={2} />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Subject + level chip */}
-            {(subject || level || specialist) && (
-              <div className="flex items-center gap-1.5 mb-2">
-                {subject && <SubjectBadge subject={subject} />}
-                {level && <span className="text-xs text-slate-400">{level}</span>}
-                {specialist && (
-                  <span className="text-[10px] text-slate-400 ml-auto">
-                    Agent {specialist}
-                  </span>
-                )}
+      {/* ── Streaming ─────────────────────────────────────────────────────── */}
+      {phase === 'specialist' && (
+        <div className="flex flex-col gap-2">
+          {tokens ? (
+            <BotBubble content={tokens} isStreaming />
+          ) : (
+            <div className="flex gap-2.5 items-start">
+              <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm shadow-indigo-200">
+                <Bot className="w-4 h-4 text-white" strokeWidth={2} />
               </div>
-            )}
-
-            {/* Message bubble */}
-            <div className="bg-white border border-slate-100 rounded-xl rounded-tl-none p-4 shadow-sm">
-              {tokens ? (
-                <div className="prose prose-sm max-w-none">
-                  <MathRenderer
-                    content={tokens}
-                    className="text-slate-800 leading-relaxed text-sm"
-                  />
-                  {phase === 'specialist' && (
-                    <span className="inline-block w-0.5 h-4 bg-indigo-500 ml-0.5 animate-pulse align-middle" />
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Skeleton className="h-3.5 w-full rounded" />
-                  <Skeleton className="h-3.5 w-5/6 rounded" />
-                  <Skeleton className="h-3.5 w-4/5 rounded" />
-                </div>
-              )}
+              <div className="flex-1 bg-white border border-slate-100 rounded-xl rounded-tl-none px-4 py-3 shadow-sm space-y-2">
+                <Skeleton className="h-3.5 w-full rounded" />
+                <Skeleton className="h-3.5 w-5/6 rounded" />
+                <Skeleton className="h-3.5 w-4/5 rounded" />
+              </div>
             </div>
-
-            {/* Inline source cards — shown when done */}
-            {phase === 'done' && sources.length > 0 && (
-              <div className="mt-3 space-y-2">
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Basé sur tes cours
-                </p>
-                {sources.map((src, i) => (
-                  <InlineSourceCard key={i} source={src} index={i} />
-                ))}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       )}
 
-      {/* Done: score + feedback */}
-      {phase === 'done' && sessionId && (
-        <div className="flex flex-col gap-3 mt-1">
-          {/* Score card */}
-          <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 p-3.5">
-            <div className={cn(
-              'w-11 h-11 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0',
-              evaluationScore >= 0.7 ? 'bg-emerald-50 text-emerald-600'
-              : evaluationScore >= 0.4 ? 'bg-amber-50 text-amber-600'
-              : 'bg-red-50 text-red-600'
-            )}>
-              {Math.round(evaluationScore * 100)}
+      {/* ── Done : bulles + sources + feedback + question ─────────────────── */}
+      {phase === 'done' && bubbles && (
+        <>
+          {(subject || level) && (
+            <div className="flex items-center gap-1.5 px-1">
+              {subject && <SubjectBadge subject={subject} />}
+              {level && <span className="text-xs text-slate-400">{level}</span>}
+              {specialist && (
+                <span className="text-[10px] text-slate-400 ml-auto">Agent {specialist}</span>
+              )}
             </div>
-            <div>
-              <p className="font-semibold text-slate-900 text-sm">Score de qualité</p>
-              <p className="text-xs text-slate-500">
-                {evaluationScore >= 0.7
-                  ? 'Correction complète et bien guidée'
-                  : evaluationScore >= 0.4
-                  ? 'Correction acceptable'
-                  : 'Quelques points à revoir'}
-              </p>
-            </div>
+          )}
+
+          {/* Bulles de correction */}
+          <div className="flex flex-col gap-2">
+            {bubbles.map((bubble, i) => (
+              <BotBubble key={i} content={bubble} />
+            ))}
           </div>
 
-          <FeedbackBar sessionId={sessionId} />
-        </div>
+          {/* Sources */}
+          {sources.length > 0 && (
+            <div className="mt-1 space-y-2">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">
+                Basé sur tes cours
+              </p>
+              {sources.map((src, i) => (
+                <InlineSourceCard key={i} source={src} index={i} />
+              ))}
+            </div>
+          )}
+
+          {/* Feedback 👍/👎 */}
+          {sessionId && <FeedbackBar sessionId={sessionId} />}
+
+          {/* Question de clôture — human in the loop */}
+          {!followupStarted && onFollowup && (
+            <ClosingQuestion onFollowup={onFollowup} />
+          )}
+        </>
       )}
 
       <div ref={bottomRef} />
@@ -218,7 +251,34 @@ export function CorrectionStream({
   )
 }
 
-// Inline source card (inspired by AI Guided Learning reference cards)
+// ── Closing question ──────────────────────────────────────────────────────────
+
+function ClosingQuestion({ onFollowup }: { onFollowup: (understood: boolean) => void }) {
+  return (
+    <div className="flex flex-col gap-3 mt-1">
+      <BotBubble content="Est-ce que cette correction t'a aidé ? Tu as des questions sur une étape ?" />
+      <div className="flex gap-2 pl-10">
+        <button
+          type="button"
+          onClick={() => onFollowup(true)}
+          className="flex-1 py-2.5 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium text-sm rounded-xl border border-emerald-200 transition-colors duration-150 cursor-pointer"
+        >
+          ✓ J&apos;ai compris
+        </button>
+        <button
+          type="button"
+          onClick={() => onFollowup(false)}
+          className="flex-1 py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-sm rounded-xl border border-indigo-200 transition-colors duration-150 cursor-pointer"
+        >
+          J&apos;ai une question
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Source card ───────────────────────────────────────────────────────────────
+
 function InlineSourceCard({ source, index }: { source: string; index: number }) {
   return (
     <div className="flex items-start gap-2.5 bg-indigo-50/60 border border-indigo-100 rounded-xl p-3">
@@ -227,11 +287,9 @@ function InlineSourceCard({ source, index }: { source: string; index: number }) 
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider mb-0.5">
-          Extrait {index + 1}
+          Cours utilisé {index + 1}
         </p>
-        <p className="text-xs text-slate-700 leading-relaxed line-clamp-3">
-          {source}
-        </p>
+        <p className="text-xs text-slate-700 leading-relaxed line-clamp-3">{source}</p>
       </div>
     </div>
   )

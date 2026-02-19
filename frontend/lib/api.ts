@@ -80,6 +80,30 @@ export function getCorrectStreamUrl(params: CorrectParams): {
   }
 }
 
+export interface FollowupMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export function getFollowupStreamUrl(params: {
+  userId: string
+  routedSubject: string
+  level: string
+  conversationHistory: FollowupMessage[]
+  message: string
+}): { url: string; formData: FormData } {
+  const form = new FormData()
+  form.append('user_id', params.userId)
+  form.append('routed_subject', params.routedSubject)
+  form.append('level', params.level)
+  form.append('conversation_history', JSON.stringify(params.conversationHistory))
+  form.append('message', params.message)
+  return {
+    url: `${API_URL}/api/exercice/followup/stream`,
+    formData: form,
+  }
+}
+
 export async function submitFeedback(
   sessionId: string,
   userId: string,

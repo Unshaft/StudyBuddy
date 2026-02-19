@@ -17,6 +17,7 @@ from config import get_settings
 
 settings = get_settings()
 client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+async_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 # ── Persona StudyBuddy commune ────────────────────────────────────────────────
 
@@ -268,17 +269,17 @@ FORMAT DE RÉPONSE ATTENDU :
         """
         Version streaming — yield les tokens au fur et à mesure.
         À appeler depuis l'endpoint SSE.
+        Note : pas d'outils ici — le tool_use (rag_requery) n'est pas géré
+        en mode streaming, Claude génère directement sa réponse complète.
         """
-        tools = [RAG_REQUERY_TOOL] + self.subject_tools
         system_prompt = self.build_system_prompt(state)
         user_prompt = self._build_user_prompt(state)
 
-        with client.messages.stream(
+        async with async_client.messages.stream(
             model=settings.correction_model,
             max_tokens=settings.specialist_max_tokens,
             system=system_prompt,
-            tools=tools,
             messages=[{"role": "user", "content": user_prompt}],
         ) as stream:
-            for text in stream.text_stream:
+            async for text in stream.text_stream:
                 yield text

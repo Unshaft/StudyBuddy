@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Plus, FileText, BookOpen } from 'lucide-react'
 import { Header } from '@/components/layout/header'
@@ -8,24 +8,25 @@ import { PageWrapper } from '@/components/layout/page-wrapper'
 import { CourseList } from '@/components/cours/course-list'
 import { useCoursStore } from '@/store/cours.store'
 import { useAuthStore } from '@/store/auth.store'
-import { useUser } from '@/hooks/useUser'
 import { listCourses } from '@/lib/api'
 import { SUBJECTS } from '@/types'
 
 export default function CoursPage() {
-  useUser()
   const user = useAuthStore((s) => s.user)
   const { courses, setCourses } = useCoursStore()
-  const [loading, setLoading] = [
-    useCoursStore((s) => s.isUploading),
-    useCoursStore((s) => s.setIsUploading),
-  ]
+  const [loading, setLoading] = useState(false)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!user) return
     setLoading(true)
+    setFetchError(null)
     listCourses(user.id)
       .then(setCourses)
+      .catch((err) => {
+        console.error('listCourses error:', err)
+        setFetchError('Impossible de charger les cours. Vérifie ta connexion.')
+      })
       .finally(() => setLoading(false))
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -89,6 +90,11 @@ export default function CoursPage() {
       )}
 
       <PageWrapper>
+        {fetchError && (
+          <div className="mb-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
+            {fetchError}
+          </div>
+        )}
         <CourseList courses={courses} loading={loading} />
       </PageWrapper>
     </>

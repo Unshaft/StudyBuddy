@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cours — Développement et Factorisation — 3ème</title>
+  <style>
+    body {
+      font-family: 'Times New Roman', serif;
+      max-width: 700px;
+      margin: 40px auto;
+      padding: 20px 40px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #111;
+      background: white;
+    }
+    h1 { font-size: 20px; text-align: center; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 20px; }
+    h2 { font-size: 16px; margin-top: 24px; margin-bottom: 8px; background: #e8e8e8; padding: 4px 8px; }
+    .definition, .propriete, .exemple, .methode {
+      border-left: 4px solid #333;
+      padding: 6px 12px;
+      margin: 10px 0;
+      background: #fafafa;
+    }
+    .definition { border-color: #2563eb; }
+    .propriete { border-color: #16a34a; }
+    .exemple { border-color: #9333ea; }
+    .methode { border-color: #dc2626; }
+    .label {
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .label-def { color: #2563eb; }
+    .label-prop { color: #16a34a; }
+    .label-ex { color: #9333ea; }
+    .label-meth { color: #dc2626; }
+    .formula { font-style: italic; margin: 4px 0; font-size: 15px; }
+    .note { font-size: 13px; color: #444; }
+    ul { margin: 4px 0; padding-left: 20px; }
+    li { margin-bottom: 3px; }
+  </style>
+</head>
+<body>
+
+<h1>Mathématiques — 3ème<br>Chapitre 4 : Développement et Factorisation</h1>
+
+<h2>I. Développer une expression</h2>
+
+<div class="definition">
+  <div class="label label-def">Définition</div>
+  <strong>Développer</strong> une expression algébrique, c'est transformer un produit en une somme en utilisant la distributivité.
+</div>
+
+<div class="propriete">
+  <div class="label label-prop">Propriété — Distributivité simple</div>
+  <div class="formula">k(a + b) = ka + kb</div>
+  <div class="formula">k(a − b) = ka − kb</div>
+  Pour tout réel <em>k</em>, <em>a</em>, <em>b</em>.
+</div>
+
+<div class="exemple">
+  <div class="label label-ex">Exemple</div>
+  <ul>
+    <li>3(x + 5) = 3x + 15</li>
+    <li>−2(4x − 7) = −8x + 14</li>
+    <li>x(x − 3) = x² − 3x</li>
+  </ul>
+</div>
+
+<div class="propriete">
+  <div class="label label-prop">Propriété — Distributivité double</div>
+  <div class="formula">(a + b)(c + d) = ac + ad + bc + bd</div>
+  On multiplie chaque terme du premier facteur par chaque terme du second.
+</div>
+
+<div class="exemple">
+  <div class="label label-ex">Exemple</div>
+  (x + 3)(x − 2) = x·x + x·(−2) + 3·x + 3·(−2) = x² − 2x + 3x − 6 = <strong>x² + x − 6</strong>
+</div>
+
+<h2>II. Identités remarquables</h2>
+
+<div class="propriete">
+  <div class="label label-prop">Propriétés — Les 3 identités à connaître absolument</div>
+  <ol>
+    <li class="formula"><strong>(a + b)² = a² + 2ab + b²</strong> &nbsp;&nbsp;<em>(carré d'une somme)</em></li>
+    <li class="formula"><strong>(a − b)² = a² − 2ab + b²</strong> &nbsp;&nbsp;<em>(carré d'une différence)</em></li>
+    <li class="formula"><strong>(a + b)(a − b) = a² − b²</strong> &nbsp;&nbsp;<em>(produit de la somme et de la différence)</em></li>
+  </ol>
+</div>
+
+<div class="exemple">
+  <div class="label label-ex">Exemples</div>
+  <ul>
+    <li>(x + 4)² = x² + 2×x×4 + 4² = x² + 8x + 16</li>
+    <li>(2x − 3)² = (2x)² − 2×2x×3 + 3² = 4x² − 12x + 9</li>
+    <li>(x + 5)(x − 5) = x² − 5² = x² − 25</li>
+  </ul>
+</div>
+
+<h2>III. Factoriser une expression</h2>
+
+<div class="definition">
+  <div class="label label-def">Définition</div>
+  <strong>Factoriser</strong>, c'est l'opération inverse du développement : on transforme une somme en un produit.
+</div>
+
+<div class="methode">
+  <div class="label label-meth">Méthode — Factorisation par facteur commun</div>
+  <ol>
+    <li>Identifier le facteur commun à tous les termes.</li>
+    <li>Mettre ce facteur en évidence devant une parenthèse.</li>
+    <li>Vérifier en développant.</li>
+  </ol>
+</div>
+
+<div class="exemple">
+  <div class="label label-ex">Exemples</div>
+  <ul>
+    <li>6x + 10 = 2(3x + 5) &nbsp;&nbsp;<span class="note">(facteur commun : 2)</span></li>
+    <li>x² − 4x = x(x − 4) &nbsp;&nbsp;<span class="note">(facteur commun : x)</span></li>
+    <li>3x² + 6x = 3x(x + 2) &nbsp;&nbsp;<span class="note">(facteur commun : 3x)</span></li>
+  </ul>
+</div>
+
+<div class="methode">
+  <div class="label label-meth">Méthode — Factorisation avec les identités remarquables</div>
+  Reconnaître la forme a² − b², (a + b)², ou (a − b)² dans l'expression.
+</div>
+
+<div class="exemple">
+  <div class="label label-ex">Exemples</div>
+  <ul>
+    <li>x² − 9 = x² − 3² = <strong>(x + 3)(x − 3)</strong></li>
+    <li>4x² − 25 = (2x)² − 5² = <strong>(2x + 5)(2x − 5)</strong></li>
+    <li>x² + 6x + 9 = x² + 2×x×3 + 3² = <strong>(x + 3)²</strong></li>
+  </ul>
+</div>
+
+<h2>IV. À retenir</h2>
+
+<div class="propriete">
+  <div class="label label-prop">Résumé des règles essentielles</div>
+  <ul>
+    <li>Développer : produit → somme (utiliser la distributivité)</li>
+    <li>Factoriser : somme → produit (mettre en évidence un facteur commun)</li>
+    <li>Les 3 identités remarquables sont à savoir par cœur</li>
+    <li>Toujours vérifier le résultat en développant ou en testant une valeur numérique</li>
+  </ul>
+</div>
+
+</body>
+</html>

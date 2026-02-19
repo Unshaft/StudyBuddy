@@ -40,12 +40,19 @@ export interface CorrectionStreamProps {
   followupStarted?: boolean
 }
 
-/** Découpe le texte de correction en paragraphes (bulles séparées) */
+/**
+ * Découpe le texte de correction en bulles logiques.
+ * Priorité : couper sur les marqueurs de section (Étape X, À retenir, ##...).
+ * Fallback : couper sur les doubles sauts de ligne.
+ */
 function splitIntoBubbles(text: string): string[] {
-  return text
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0)
+  // Coupe juste avant un marqueur de section (début de ligne)
+  const sectionPattern = /(?=\n(?:\*\*\s*(?:Étape\s+\d+|À retenir|Remarque|Méthode|Correction|Synthèse)|#{1,3}\s))/gi
+  const parts = text.split(sectionPattern).map((p) => p.trim()).filter((p) => p.length > 0)
+  if (parts.length > 1) return parts
+
+  // Fallback : double saut de ligne
+  return text.split(/\n{2,}/).map((p) => p.trim()).filter((p) => p.length > 0)
 }
 
 /** Bulle de message IA */

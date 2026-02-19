@@ -131,6 +131,33 @@ async def upload_course(
     )
 
 
+class CourseDetail(BaseModel):
+    id: str
+    title: str
+    subject: str
+    level: str
+    keywords: list[str] = []
+    raw_content: str
+    created_at: str
+
+
+@router.get("/{course_id}", response_model=CourseDetail)
+def get_course(course_id: str, user_id: str):
+    logger.info("[GET] course_id=%s user=%s", course_id, user_id)
+    supabase = get_supabase()
+    result = (
+        supabase.table("courses")
+        .select("id, title, subject, level, keywords, raw_content, created_at")
+        .eq("id", course_id)
+        .eq("user_id", user_id)
+        .single()
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Cours introuvable")
+    return result.data
+
+
 @router.get("/", response_model=list[CourseListItem])
 def list_courses(user_id: str):
     logger.info("[LIST] user=%s", user_id)

@@ -29,6 +29,23 @@ export async function uploadCourse(
   return handleResponse<CourseResponse>(res)
 }
 
+export interface CourseDetail {
+  id: string
+  title: string
+  subject: string
+  level: string
+  keywords: string[]
+  raw_content: string
+  created_at: string
+}
+
+export async function getCourse(courseId: string, userId: string): Promise<CourseDetail> {
+  const res = await fetch(
+    `${API_URL}/api/cours/${courseId}?user_id=${encodeURIComponent(userId)}`
+  )
+  return handleResponse<CourseDetail>(res)
+}
+
 export async function listCourses(userId: string): Promise<CourseListItem[]> {
   const res = await fetch(
     `${API_URL}/api/cours/?user_id=${encodeURIComponent(userId)}`

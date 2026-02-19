@@ -1,6 +1,7 @@
 """
-API cours — ingestion de cours via photo (OCR + chunking + embedding + stockage).
+API cours - ingestion de cours via photo (OCR + chunking + embedding + stockage).
 """
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -13,6 +14,7 @@ from rag.chunking import chunk_course_text
 from rag.embeddings import embed_chunks
 from rag.retrieval import store_chunks, delete_course_chunks
 
+logger = logging.getLogger("studybuddy.cours")
 router = APIRouter()
 
 MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -42,44 +44,40 @@ async def upload_course(
     file: UploadFile = File(...),
     user_id: str = Form(...),
 ):
-    """
-    Upload une photo de cours → OCR → vectorisation → stockage.
+    logger.info("[UPLOAD] debut - user=%s fichier=%s type=%s", user_id, file.filename, file.content_type)
 
-    - Accepte JPEG, PNG, WEBP, HEIC
-    - Extrait le texte via Claude Vision
-    - Vectorise et stocke dans pgvector
-    """
-    # Validation du fichier
     if file.content_type not in ALLOWED_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Format non supporté. Formats acceptés : JPEG, PNG, WEBP, HEIC",
-        )
+        logger.warning("[UPLOAD] type refuse: %s", file.content_type)
+        raise HTTPException(status_code=400, detail="Format non supporte. Formats acceptes : JPEG, PNG, WEBP, HEIC")
 
     image_bytes = await file.read()
+    logger.info("[UPLOAD] taille image: %.1f KB", len(image_bytes) / 1024)
 
     if len(image_bytes) > MAX_IMAGE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail="Image trop lourde. Taille maximale : 10 MB",
-        )
+        logger.warning("[UPLOAD] image trop lourde: %d bytes", len(image_bytes))
+        raise HTTPException(status_code=413, detail="Image trop lourde. Taille maximale : 10 MB")
 
     # 1. OCR via Claude Vision
-    ocr_result = await extract_course_from_image(image_bytes)
+    logger.info("[UPLOAD] etape 1/4 - OCR Claude Vision...")
+    try:
+        ocr_result = await extract_course_from_image(image_bytes)
+        logger.info("[UPLOAD] OCR OK - titre=%s matiere=%s niveau=%s contenu=%d chars",
+                    ocr_result.title, ocr_result.subject, ocr_result.level, len(ocr_result.content or ""))
+    except Exception as e:
+        logger.error("[UPLOAD] OCR ERREUR: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur OCR: {str(e)}")
 
     if not ocr_result.content:
-        raise HTTPException(
-            status_code=422,
-            detail="Impossible d'extraire du texte de cette image. Vérifiez la qualité de la photo.",
-        )
+        logger.warning("[UPLOAD] OCR vide - pas de texte extrait")
+        raise HTTPException(status_code=422, detail="Impossible d extraire du texte de cette image.")
 
-    # 2. Créer l'entrée cours en DB
-    supabase = get_supabase()
-    course_id = str(uuid.uuid4())
-    now = datetime.now(timezone.utc).isoformat()
-
-    supabase.table("courses").insert(
-        {
+    # 2. Creer l entree cours en DB
+    logger.info("[UPLOAD] etape 2/4 - insertion Supabase...")
+    try:
+        supabase = get_supabase()
+        course_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc).isoformat()
+        supabase.table("courses").insert({
             "id": course_id,
             "user_id": user_id,
             "title": ocr_result.title,
@@ -88,28 +86,39 @@ async def upload_course(
             "keywords": ocr_result.keywords,
             "raw_content": ocr_result.content,
             "created_at": now,
-        }
-    ).execute()
+        }).execute()
+        logger.info("[UPLOAD] DB OK - course_id=%s", course_id)
+    except Exception as e:
+        logger.error("[UPLOAD] DB ERREUR: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur base de donnees: {str(e)}")
 
     # 3. Chunking
-    chunks = chunk_course_text(
-        text=ocr_result.content,
-        course_id=course_id,
-        subject=ocr_result.subject,
-        title=ocr_result.title,
-        keywords=ocr_result.keywords,
-    )
+    logger.info("[UPLOAD] etape 3/4 - chunking...")
+    try:
+        chunks = chunk_course_text(
+            text=ocr_result.content,
+            course_id=course_id,
+            subject=ocr_result.subject,
+            title=ocr_result.title,
+            keywords=ocr_result.keywords,
+        )
+        logger.info("[UPLOAD] chunking OK - %d chunks", len(chunks))
+    except Exception as e:
+        logger.error("[UPLOAD] chunking ERREUR: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur chunking: {str(e)}")
 
-    # 4. Embedding
-    chunks_with_embeddings = await embed_chunks(chunks)
+    # 4. Embedding + stockage
+    logger.info("[UPLOAD] etape 4/4 - embedding Voyage AI + stockage pgvector...")
+    try:
+        chunks_with_embeddings = await embed_chunks(chunks)
+        logger.info("[UPLOAD] embedding OK - %d vecteurs", len(chunks_with_embeddings))
+        await store_chunks(chunks_with_embeddings=chunks_with_embeddings, user_id=user_id, course_id=course_id)
+        logger.info("[UPLOAD] stockage pgvector OK")
+    except Exception as e:
+        logger.error("[UPLOAD] embedding/stockage ERREUR: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Erreur embedding: {str(e)}")
 
-    # 5. Stockage dans pgvector
-    await store_chunks(
-        chunks_with_embeddings=chunks_with_embeddings,
-        user_id=user_id,
-        course_id=course_id,
-    )
-
+    logger.info("[UPLOAD] SUCCES - course_id=%s chunks=%d", course_id, len(chunks))
     return CourseResponse(
         id=course_id,
         title=ocr_result.title,
@@ -123,7 +132,7 @@ async def upload_course(
 
 @router.get("/", response_model=list[CourseListItem])
 def list_courses(user_id: str):
-    """Liste tous les cours d'un utilisateur."""
+    logger.info("[LIST] user=%s", user_id)
     supabase = get_supabase()
     result = (
         supabase.table("courses")
@@ -132,15 +141,14 @@ def list_courses(user_id: str):
         .order("created_at", desc=True)
         .execute()
     )
+    logger.info("[LIST] %d cours trouves", len(result.data))
     return result.data
 
 
 @router.delete("/{course_id}", status_code=204)
 async def delete_course(course_id: str, user_id: str):
-    """Supprime un cours et tous ses chunks vectorisés."""
+    logger.info("[DELETE] course_id=%s user=%s", course_id, user_id)
     supabase = get_supabase()
-
-    # Vérifie que le cours appartient à l'utilisateur
     result = (
         supabase.table("courses")
         .select("id")
@@ -149,10 +157,8 @@ async def delete_course(course_id: str, user_id: str):
         .execute()
     )
     if not result.data:
+        logger.warning("[DELETE] cours introuvable course_id=%s", course_id)
         raise HTTPException(status_code=404, detail="Cours introuvable")
-
-    # Supprime les chunks vectorisés
     await delete_course_chunks(course_id)
-
-    # Supprime le cours
     supabase.table("courses").delete().eq("id", course_id).execute()
+    logger.info("[DELETE] SUCCES course_id=%s", course_id)

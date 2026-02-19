@@ -1,14 +1,26 @@
+import logging
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import get_settings
 from api import cours, exercice
 
+# Configuration du logging global (visible dans Railway)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger("studybuddy")
+
 settings = get_settings()
+logger.info("StudyBuddy API demarrage - env=%s", settings.environment)
 
 app = FastAPI(
     title="StudyBuddy API",
-    description="API d'aide aux devoirs — OCR, RAG et correction pas-à-pas",
+    description="API d aide aux devoirs - OCR, RAG et correction pas-a-pas",
     version="0.1.0",
 )
 

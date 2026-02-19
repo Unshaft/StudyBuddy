@@ -6,6 +6,7 @@ Endpoints :
   POST /api/exercice/correct/stream  → SSE avec events de phase + tokens LLM
 """
 import json
+import logging
 import uuid
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -26,6 +27,7 @@ from rag.ocr import extract_exercise_from_image
 from rag.retrieval import search_relevant_chunks
 from config import get_settings
 
+logger = logging.getLogger("studybuddy.exercice")
 router = APIRouter()
 settings = get_settings()
 
@@ -141,13 +143,16 @@ async def correct_exercise_stream(
         def sse(data: dict) -> str:
             return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
+        logger.info("[STREAM] session=%s user=%s", session_id, user_id)
         yield sse({"type": "start", "session_id": session_id})
 
         # ── Phase 1 : OCR ─────────────────────────────────────────────────────
+        logger.info("[STREAM] phase OCR start")
         yield sse({"type": "phase", "phase": "ocr", "status": "running"})
         try:
             exercise = await extract_exercise_from_image(image_bytes)
         except Exception as e:
+            logger.error("[STREAM] OCR ERREUR: %s", e, exc_info=True)
             yield sse({"type": "error", "code": "OCR_FAILED", "message": str(e)})
             return
 
@@ -156,6 +161,7 @@ async def correct_exercise_stream(
                        "message": "Impossible d'extraire l'énoncé. Vérifiez la qualité de la photo."})
             return
 
+        logger.info("[STREAM] OCR OK - enonce=%d chars matiere=%s type=%s", len(exercise.statement), exercise.subject, exercise.exercise_type)
         yield sse({
             "type": "phase", "phase": "ocr", "status": "done",
             "subject": exercise.subject, "exercise_type": exercise.exercise_type,
@@ -172,6 +178,7 @@ async def correct_exercise_stream(
         rag_query = _build_rag_query(exercise.statement, routed_subject, routed_level)
 
         # ── Phase 3 : RAG ─────────────────────────────────────────────────────
+        logger.info("[STREAM] phase RAG start - query=%s", rag_query[:80])
         yield sse({"type": "phase", "phase": "rag", "status": "running"})
         try:
             chunks = await search_relevant_chunks(
@@ -180,7 +187,8 @@ async def correct_exercise_stream(
                 subject=routed_subject,
                 top_k=settings.specialist_top_k,
             )
-        except Exception:
+        except Exception as e:
+            logger.error("[STREAM] RAG ERREUR: %s", e, exc_info=True)
             chunks = []
 
         chunks_dicts = [
@@ -191,6 +199,7 @@ async def correct_exercise_stream(
             }
             for c in chunks
         ]
+        logger.info("[STREAM] RAG OK - %d chunks trouves", len(chunks_dicts))
         yield sse({"type": "phase", "phase": "rag", "status": "done", "chunks_found": len(chunks_dicts)})
 
         # ── Phase 4 : Spécialiste (streaming tokens) ──────────────────────────
@@ -213,6 +222,7 @@ async def correct_exercise_stream(
         stream_state["retrieved_chunks"] = chunks_dicts
         stream_state["session_id"] = session_id
 
+        logger.info("[STREAM] phase SPECIALIST start - %s niveau=%s", routed_subject, routed_level)
         full_response = ""
         async for token in specialist.run_stream(stream_state):
             full_response += token
@@ -225,10 +235,12 @@ async def correct_exercise_stream(
         eval_state["specialist_response"] = full_response
         eval_result = await evaluator_node(eval_state)  # type: ignore[arg-type]
 
+        logger.info("[STREAM] evaluation OK - score=%.2f", eval_result.get("evaluation_score", 0))
         yield sse({"type": "phase", "phase": "evaluating", "status": "done"})
 
         # ── Finalisation ──────────────────────────────────────────────────────
         sources = list({f"{c['course_title']} ({c['subject']})" for c in chunks_dicts})
+        logger.info("[STREAM] SUCCES session=%s score=%.2f sources=%d", session_id, eval_result.get("evaluation_score", 0), len(chunks_dicts))
         yield sse({
             "type": "done",
             "session_id": session_id,

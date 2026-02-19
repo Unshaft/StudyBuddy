@@ -47,7 +47,7 @@ export function CourseCard({ course }: CourseCardProps) {
           <span className="text-xs text-slate-300">·</span>
           <span className="text-xs text-slate-400">{date}</span>
         </div>
-        {course.keywords.length > 0 && (
+        {course.keywords?.length > 0 && (
           <p className="text-xs text-slate-400 mt-1.5 truncate">
             {course.keywords.slice(0, 4).join(', ')}
           </p>

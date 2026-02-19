@@ -36,6 +36,7 @@ class CourseListItem(BaseModel):
     title: str
     subject: str
     level: str
+    keywords: list[str] = []
     created_at: str
 
 
@@ -136,7 +137,7 @@ def list_courses(user_id: str):
     supabase = get_supabase()
     result = (
         supabase.table("courses")
-        .select("id, title, subject, level, created_at")
+        .select("id, title, subject, level, keywords, created_at")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
         .execute()

@@ -1,8 +1,8 @@
 'use client'
 
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import Image from 'next/image'
-import { Image as ImageIcon, RotateCcw, Type } from 'lucide-react'
+import { Image as ImageIcon, RotateCcw, Type, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { SUBJECTS } from '@/types'
 
@@ -17,6 +17,7 @@ interface ExerciseCaptureProps {
 }
 
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif'
+const MAX_SIZE = 10 * 1024 * 1024
 
 export function ExerciseCapture({
   preview,
@@ -29,9 +30,14 @@ export function ExerciseCapture({
 }: ExerciseCaptureProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
+  const [sizeError, setSizeError] = useState(false)
 
   function handleFile(f: File) {
-    if (f.size > 10 * 1024 * 1024) return
+    if (f.size > MAX_SIZE) {
+      setSizeError(true)
+      return
+    }
+    setSizeError(false)
     onSelect(f)
   }
 
@@ -41,6 +47,7 @@ export function ExerciseCapture({
         ref={fileRef}
         type="file"
         accept={ACCEPT}
+        aria-label="Choisir une image depuis la galerie"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0]
@@ -52,7 +59,10 @@ export function ExerciseCapture({
         ref={cameraRef}
         type="file"
         accept="image/*"
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore capture is a valid HTML attribute for mobile file inputs
         capture="environment"
+        aria-label="Prendre une photo avec l'appareil photo"
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0]
@@ -61,10 +71,20 @@ export function ExerciseCapture({
         }}
       />
 
+      {/* Erreur taille fichier */}
+      {sizeError && (
+        <div
+          role="alert"
+          className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600"
+        >
+          <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
+          Image trop lourde (max 10 Mo). Essaie avec une photo moins grande.
+        </div>
+      )}
+
       {/* Viewfinder / Preview zone */}
       <div
-        className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer group"
-        style={{ backgroundColor: preview ? undefined : '#0F172A' }}
+        className="relative w-full aspect-[3/4] rounded-2xl overflow-hidden cursor-pointer group bg-slate-900"
         onClick={() => !preview && cameraRef.current?.click()}
       >
         {preview ? (
@@ -77,8 +97,9 @@ export function ExerciseCapture({
               sizes="(max-width: 640px) 100vw, 480px"
             />
             <button
+              type="button"
               onClick={(e) => { e.stopPropagation(); onReset() }}
-              className="absolute top-3 right-3 w-9 h-9 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors duration-150 cursor-pointer"
+              className="absolute top-3 right-3 w-11 h-11 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors duration-150 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black/50"
               aria-label="Reprendre la photo"
             >
               <RotateCcw className="w-4 h-4" />
@@ -136,8 +157,9 @@ export function ExerciseCapture({
         <div className="flex items-center justify-between">
           {/* Gallery */}
           <button
-            onClick={() => fileRef.current?.click()}
-            className="flex flex-col items-center gap-1 w-14 cursor-pointer"
+            type="button"
+            onClick={() => { setSizeError(false); fileRef.current?.click() }}
+            className="flex flex-col items-center gap-1 w-14 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:rounded-lg"
             aria-label="Depuis la galerie"
           >
             <div className="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center hover:bg-slate-200 transition-colors duration-150">
@@ -148,8 +170,9 @@ export function ExerciseCapture({
 
           {/* Main shutter button */}
           <button
-            onClick={() => cameraRef.current?.click()}
-            className="relative flex items-center justify-center group cursor-pointer"
+            type="button"
+            onClick={() => { setSizeError(false); cameraRef.current?.click() }}
+            className="relative flex items-center justify-center group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:rounded-full"
             aria-label="Prendre en photo"
           >
             {/* Outer ring */}
@@ -159,11 +182,13 @@ export function ExerciseCapture({
             </div>
           </button>
 
-          {/* Type manually (placeholder) */}
+          {/* Type manually (placeholder — désactivé) */}
           <button
-            className="flex flex-col items-center gap-1 w-14 cursor-pointer opacity-50"
-            aria-label="Saisir manuellement"
-            disabled
+            type="button"
+            className="flex flex-col items-center gap-1 w-14 cursor-not-allowed opacity-40"
+            aria-label="Saisie manuelle (bientôt disponible)"
+            aria-disabled="true"
+            tabIndex={-1}
           >
             <div className="w-11 h-11 bg-slate-100 rounded-full flex items-center justify-center">
               <Type className="w-5 h-5 text-slate-600" strokeWidth={1.8} />
@@ -235,9 +260,11 @@ function SubjectTab({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={[
         'flex-shrink-0 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 cursor-pointer',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1',
         active
           ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
           : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300 hover:text-indigo-600',

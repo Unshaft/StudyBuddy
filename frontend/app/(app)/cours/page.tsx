@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Plus, FileText, BookOpen } from 'lucide-react'
+import { Plus, FileText, BookOpen, RefreshCw } from 'lucide-react'
 import { Header } from '@/components/layout/header'
 import { PageWrapper } from '@/components/layout/page-wrapper'
 import { CourseList } from '@/components/cours/course-list'
@@ -17,7 +17,7 @@ export default function CoursPage() {
   const [loading, setLoading] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
 
-  useEffect(() => {
+  function load() {
     if (!user) return
     setLoading(true)
     setFetchError(null)
@@ -28,7 +28,9 @@ export default function CoursPage() {
         setFetchError('Impossible de charger les cours. Vérifie ta connexion.')
       })
       .finally(() => setLoading(false))
-  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
+
+  useEffect(() => { load() }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Compute stats
   const subjectsUsed = new Set(courses.map((c) => c.subject)).size
@@ -40,7 +42,7 @@ export default function CoursPage() {
         right={
           <Link
             href="/cours/upload"
-            className="w-10 h-10 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors duration-200 cursor-pointer"
+            className="w-11 h-11 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             aria-label="Ajouter un cours"
           >
             <Plus className="w-5 h-5" strokeWidth={2.5} />
@@ -91,8 +93,19 @@ export default function CoursPage() {
 
       <PageWrapper>
         {fetchError && (
-          <div className="mb-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600">
-            {fetchError}
+          <div
+            role="alert"
+            className="mb-3 px-4 py-3 bg-red-50 border border-red-100 rounded-xl text-sm text-red-600 flex items-center justify-between gap-3"
+          >
+            <span>{fetchError}</span>
+            <button
+              type="button"
+              onClick={load}
+              className="flex items-center gap-1.5 text-red-600 font-medium hover:text-red-700 transition-colors flex-shrink-0 cursor-pointer"
+            >
+              <RefreshCw className="w-3.5 h-3.5" strokeWidth={2.5} />
+              Réessayer
+            </button>
           </div>
         )}
         <CourseList courses={courses} loading={loading} />

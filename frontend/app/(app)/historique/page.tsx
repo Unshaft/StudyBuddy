@@ -22,12 +22,14 @@ export default function HistoriquePage() {
       />
       <PageWrapper>
         {!loaded ? (
-          <div className="space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
+          <div className="space-y-3" role="region" aria-busy="true" aria-label="Chargement de l'historique">
+            {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="bg-white rounded-2xl border border-slate-100 p-4 flex gap-3">
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-2/3 rounded-lg" />
-                  <Skeleton className="h-3 w-1/2 rounded-lg" />
+                <Skeleton className="w-11 h-11 rounded-xl flex-shrink-0" />
+                <div className="flex-1 space-y-2 py-0.5">
+                  <Skeleton className="h-4 w-1/3 rounded-lg" />
+                  <Skeleton className={cn('h-3 rounded-lg', i % 2 === 0 ? 'w-2/3' : 'w-1/2')} />
+                  <Skeleton className="h-3 w-1/4 rounded-lg" />
                 </div>
               </div>
             ))}
@@ -43,7 +45,7 @@ export default function HistoriquePage() {
             </p>
             <Link
               href="/exercice"
-              className="mt-4 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors duration-200 cursor-pointer"
+              className="mt-4 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-5 h-11 rounded-xl transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             >
               Corriger un exercice
             </Link>
@@ -62,18 +64,19 @@ export default function HistoriquePage() {
                 <Link
                   key={entry.sessionId}
                   href={`/exercice/${entry.sessionId}`}
-                  className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer"
+                  className="flex items-center gap-3 bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                 >
                   {/* Score badge */}
                   <div
                     className={cn(
-                      'w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0',
+                      'w-11 h-11 rounded-xl flex items-center justify-center font-bold text-sm flex-shrink-0',
                       entry.evaluationScore >= 0.7
                         ? 'bg-emerald-50 text-emerald-600'
                         : entry.evaluationScore >= 0.4
                         ? 'bg-amber-50 text-amber-600'
                         : 'bg-red-50 text-red-600'
                     )}
+                    aria-label={`Score : ${Math.round(entry.evaluationScore * 100)}%`}
                   >
                     {Math.round(entry.evaluationScore * 100)}
                   </div>
@@ -85,13 +88,13 @@ export default function HistoriquePage() {
                         <span className="text-xs text-slate-400">{entry.level}</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 truncate">
-                      {entry.correction.slice(0, 80)}...
+                    <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+                      {entry.correction}
                     </p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{date}</p>
                   </div>
 
-                  <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" aria-hidden="true" />
                 </Link>
               )
             })}

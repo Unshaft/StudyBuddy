@@ -31,6 +31,35 @@ RÈGLES FONDAMENTALES :
 4. Être encourageant : valoriser la démarche avant de corriger les erreurs
 5. Adapter ton vocabulaire et ta complexité au niveau scolaire de l'élève"""
 
+# ── Modes pédagogiques (Socratique) ───────────────────────────────────────────
+
+NO_ATTEMPT_INSTRUCTIONS = """
+⚠️ L'ÉLÈVE N'A PAS ENCORE ESSAYÉ CET EXERCICE.
+
+MODE COUP DE POUCE — RÈGLES STRICTES :
+1. NE RÉSOUS PAS l'exercice. Aucun calcul, aucune réponse, aucune étape complète.
+2. Commence par : "Pas de panique, voilà comment attaquer !"
+3. Donne UN coup de pouce concret pour démarrer :
+   - Identifie la première étape clé ("La première chose à faire, c'est de...")
+   - Cite l'extrait du cours qui s'applique directement (*"Ton cours dit : [citation]"*)
+   - Montre COMMENT utiliser cette notion pour démarrer, sans finir le calcul
+4. Pose UNE question guidante pour que l'élève continue seul
+5. Termine par : "Essaie jusqu'ici, puis reviens me montrer !"
+Format : 5-8 phrases maximum. Pas de solution complète, juste le démarrage.
+"""
+
+CORRECTION_MODE_INSTRUCTIONS = """
+L'ÉLÈVE A FOURNI UNE TENTATIVE — MODE CORRECTION SOCRATIQUE :
+1. Identifie CE QUI EST JUSTE avant de corriger (valorise l'effort)
+2. Pour chaque erreur : donne un INDICE ancré dans le cours, pas la correction directe
+   → *"D'après ton cours, [citation], que devrait-on faire ici ?"*
+3. Pose une question guidante AVANT de dévoiler la réponse
+4. Si une partie de l'exercice n'est pas tentée (ex : vérification manquante), le signaler
+   en fin de réponse : "Je vois que tu n'as pas encore fait [la vérification / la Q2] —
+   tu veux qu'on le fasse ensemble ?"
+5. Toujours terminer par une question ouverte ou une invitation à réessayer
+"""
+
 # ── Instructions pédagogiques par niveau ──────────────────────────────────────
 
 LEVEL_INSTRUCTIONS: dict[str, str] = {
@@ -171,12 +200,29 @@ class BaseSpecialist(ABC):
         return "\n\n---\n\n".join(parts)
 
     def build_system_prompt(self, state: AgentState) -> str:
-        """Assemble le system prompt complet : persona + matière + niveau + cours."""
+        """Assemble le system prompt complet : persona + mode pédagogique + matière + niveau + cours."""
+        student_attempted = state.get("student_attempted", False)
+        mode_block = CORRECTION_MODE_INSTRUCTIONS if student_attempted else NO_ATTEMPT_INSTRUCTIONS
         level = state.get("routed_level", "3ème")
         chunks = state.get("retrieved_chunks", [])
 
+        if student_attempted:
+            format_block = """FORMAT DE RÉPONSE ATTENDU :
+1. Une phrase valorisant ce que l'élève a bien fait (même si peu)
+2. Pour chaque point à corriger : un indice du cours (*"[citation]"*), puis une question guidante
+3. Si des parties de l'exercice ne sont pas tentées : les signaler en fin de réponse
+4. Terminer par une question ouverte ou une invitation à réessayer"""
+        else:
+            format_block = """FORMAT DE RÉPONSE ATTENDU :
+1. "Pas de panique, voilà comment attaquer !" (phrase d'accroche obligatoire)
+2. La première étape clé à faire, avec citation du cours (*"[citation]"*)
+3. Une question guidante pour que l'élève commence
+4. "Essaie jusqu'ici, puis reviens me montrer !" (phrase de clôture obligatoire)
+Maximum 5-8 phrases. Pas de solution complète."""
+
         return f"""{BASE_STUDYBUDDY_PERSONA}
 
+{mode_block}
 ══════════════════════════════════════════
 SPÉCIALISATION — {self.subject.upper().replace("_", " ")} :
 {self.subject_instructions}
@@ -190,11 +236,7 @@ EXTRAITS DU COURS DE L'ÉLÈVE :
 {self._format_chunks(chunks)}
 
 ══════════════════════════════════════════
-FORMAT DE RÉPONSE ATTENDU :
-1. Une phrase d'analyse de l'exercice
-2. Étapes numérotées : "Étape 1 :", "Étape 2 :", etc.
-   → Chaque étape cite le cours entre guillemets : *"[citation]"*
-3. "À retenir :" avec 2-3 points essentiels"""
+{format_block}"""
 
     def _build_user_prompt(self, state: AgentState) -> str:
         """Construit le prompt utilisateur avec l'énoncé et la réponse de l'élève."""

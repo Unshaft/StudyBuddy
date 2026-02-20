@@ -229,6 +229,8 @@ async def correct_exercise_stream(
         stream_state["routed_level"] = routed_level
         stream_state["retrieved_chunks"] = chunks_dicts
         stream_state["session_id"] = session_id
+        stream_state["student_work_detected"] = exercise.student_work_detected
+        stream_state["student_attempted"] = bool(student_answer) or exercise.student_work_detected
 
         logger.info("[STREAM] phase SPECIALIST start - %s niveau=%s", routed_subject, routed_level)
         full_response = ""
@@ -267,6 +269,7 @@ async def correct_exercise_stream(
             "evaluation_score": eval_result.get("evaluation_score", 0.8),
             "specialist": routed_subject,
             "level": routed_level,
+            "student_attempted": stream_state["student_attempted"],
         })
 
     return StreamingResponse(

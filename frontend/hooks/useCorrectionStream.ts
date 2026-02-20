@@ -15,6 +15,7 @@ export interface CorrectionState {
   chunksFound: number
   evaluationScore: number
   sessionId: string | null
+  studentAttempted: boolean
   error: string | null
 }
 
@@ -28,6 +29,7 @@ const INITIAL: CorrectionState = {
   chunksFound: 0,
   evaluationScore: 0,
   sessionId: null,
+  studentAttempted: false,
   error: null,
 }
 
@@ -128,6 +130,7 @@ export function useCorrectionStream() {
                   sources: event.sources,
                   evaluationScore: event.evaluation_score,
                   chunksFound: event.chunks_found ?? s.chunksFound,
+                  studentAttempted: event.student_attempted ?? false,
                 }))
                 break
 

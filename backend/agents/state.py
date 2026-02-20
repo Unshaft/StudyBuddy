@@ -78,6 +78,8 @@ class AgentState(TypedDict):
     detected_subject: str | None      # label brut OCR (ex: "Mathématiques")
     detected_level: str | None        # label brut OCR (ex: "Terminale")
     exercise_type: str                # "Problème", "QCM", "Dissertation", etc.
+    student_work_detected: bool       # travail manuscrit détecté dans l'image
+    student_attempted: bool           # True si student_answer OU student_work_detected
 
     # ── Routing ───────────────────────────────────────────────────────────────
     routed_subject: SubjectType

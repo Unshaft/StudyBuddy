@@ -38,6 +38,7 @@ Retourne le contenu sous ce format EXACT :
 
 MATIERE: [matière : Mathématiques, Physique-Chimie, SVT, Histoire-Géographie, Français, Anglais, etc.]
 TYPE: [type d'exercice : Problème, QCM, Dissertation, Exercice d'application, Rédaction, etc.]
+TRAVAIL_ELEVE: [oui / non — y a-t-il du travail manuscrit de l'élève visible dans l'image (calculs, réponses écrites à la main, ratures, annotations) en plus de l'énoncé imprimé ?]
 
 ENONCE:
 [Retranscris l'énoncé COMPLET et fidèle de l'exercice.
@@ -63,6 +64,7 @@ class ExerciseOCRResult:
     exercise_type: str
     statement: str
     raw_text: str
+    student_work_detected: bool = False
 
 
 def _image_to_base64(image_bytes: bytes) -> tuple[str, str]:
@@ -128,6 +130,7 @@ def _parse_exercise_response(text: str) -> ExerciseOCRResult:
     result = {
         "subject": "Inconnu",
         "exercise_type": "Exercice",
+        "student_work_detected": False,
     }
 
     statement_lines: list[str] = []
@@ -138,6 +141,9 @@ def _parse_exercise_response(text: str) -> ExerciseOCRResult:
             result["subject"] = line.replace("MATIERE:", "").strip()
         elif line.startswith("TYPE:"):
             result["exercise_type"] = line.replace("TYPE:", "").strip()
+        elif line.startswith("TRAVAIL_ELEVE:"):
+            val = line.replace("TRAVAIL_ELEVE:", "").strip().lower()
+            result["student_work_detected"] = val.startswith("oui")
         elif line.startswith("ENONCE:"):
             in_statement = True
         elif in_statement:
@@ -150,6 +156,7 @@ def _parse_exercise_response(text: str) -> ExerciseOCRResult:
         exercise_type=result["exercise_type"],
         statement=statement,
         raw_text=text,
+        student_work_detected=result["student_work_detected"],
     )
 
 

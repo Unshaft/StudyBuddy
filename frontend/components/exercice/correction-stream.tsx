@@ -34,6 +34,7 @@ export interface CorrectionStreamProps {
   sources: CourseSource[]
   evaluationScore: number
   sessionId: string | null
+  studentAttempted: boolean
   error: string | null
   /** Appelé quand l'élève clique "J'ai compris" ou "J'ai une question" */
   onFollowup?: (understood: boolean) => void
@@ -103,6 +104,7 @@ export function CorrectionStream({
   specialist,
   sources,
   sessionId,
+  studentAttempted,
   error,
   onFollowup,
   followupStarted = false,
@@ -249,7 +251,7 @@ export function CorrectionStream({
 
           {/* Question de clôture — human in the loop */}
           {!followupStarted && onFollowup && (
-            <ClosingQuestion onFollowup={onFollowup} />
+            <ClosingQuestion onFollowup={onFollowup} studentAttempted={studentAttempted} />
           )}
         </>
       )}
@@ -261,7 +263,30 @@ export function CorrectionStream({
 
 // ── Closing question ──────────────────────────────────────────────────────────
 
-function ClosingQuestion({ onFollowup }: { onFollowup: (understood: boolean) => void }) {
+function ClosingQuestion({
+  onFollowup,
+  studentAttempted,
+}: {
+  onFollowup: (understood: boolean) => void
+  studentAttempted: boolean
+}) {
+  if (!studentAttempted) {
+    return (
+      <div className="flex flex-col gap-3 mt-1">
+        <BotBubble content="Maintenant à toi ! Essaie l'exercice avec ces indices. Reviens me montrer ce que tu as fait quand tu es prêt." />
+        <div className="flex gap-2 pl-10">
+          <button
+            type="button"
+            onClick={() => onFollowup(false)}
+            className="flex-1 py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium text-sm rounded-xl border border-indigo-200 transition-colors duration-150 cursor-pointer"
+          >
+            J&apos;ai essayé, montre-moi la suite
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-3 mt-1">
       <BotBubble content="Est-ce que cette correction t'a aidé ? Tu as des questions sur une étape ?" />

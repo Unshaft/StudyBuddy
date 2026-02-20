@@ -147,6 +147,7 @@ export default function ExercicePage() {
               sources={state.sources}
               evaluationScore={state.evaluationScore}
               sessionId={state.sessionId}
+              studentAttempted={state.studentAttempted}
               error={state.error}
               onFollowup={handleFollowupChoice}
               followupStarted={followupOpen || understood}

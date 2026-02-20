@@ -17,11 +17,16 @@ async def ocr_node(state: AgentState) -> dict:
         if not result.statement:
             return {"error": "OCR_FAILED: Impossible d'extraire l'énoncé de l'image."}
 
+        student_work_detected = result.student_work_detected
+        student_attempted = bool(state.get("student_answer")) or student_work_detected
+
         return {
             "exercise_statement": result.statement,
             "detected_subject": result.subject,
             "detected_level": None,   # L'OCR exercice ne détecte pas le niveau — l'orchestrateur gère
             "exercise_type": result.exercise_type,
+            "student_work_detected": student_work_detected,
+            "student_attempted": student_attempted,
             "error": None,
         }
 

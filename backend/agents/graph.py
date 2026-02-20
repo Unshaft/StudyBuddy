@@ -293,6 +293,8 @@ def make_initial_state(
         detected_subject=None,
         detected_level=None,
         exercise_type="Exercice",
+        student_work_detected=False,
+        student_attempted=bool(student_answer),
         routed_subject="mathematiques",
         routed_level="3ème",
         rag_query="",

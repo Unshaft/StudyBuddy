@@ -106,6 +106,7 @@ export interface SSEDoneEvent {
   sources: CourseSource[]
   evaluation_score: number
   chunks_found?: number
+  student_attempted?: boolean
 }
 
 export interface SSEErrorEvent {

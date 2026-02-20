@@ -18,10 +18,9 @@ export default function CoursPage() {
   const [fetchError, setFetchError] = useState<string | null>(null)
 
   function load() {
-    if (!user) return
     setLoading(true)
     setFetchError(null)
-    listCourses(user.id)
+    listCourses()
       .then(setCourses)
       .catch((err) => {
         console.error('listCourses error:', err)

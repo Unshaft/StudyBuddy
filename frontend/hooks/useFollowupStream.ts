@@ -2,21 +2,22 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { getFollowupStreamUrl, type FollowupMessage } from '@/lib/api'
+import { useAuthStore } from '@/store/auth.store'
 
 export type { FollowupMessage }
 
 export function useFollowupStream(params: {
-  userId: string | null
   routedSubject: string | null
   level: string | null
 }) {
   const [messages, setMessages] = useState<FollowupMessage[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
+  const session = useAuthStore((s) => s.session)
 
   const sendMessage = useCallback(
     async (userMessage: string) => {
-      if (!params.userId || !params.routedSubject || !params.level) return
+      if (!params.routedSubject || !params.level || !session?.access_token) return
 
       // Historique avant la nouvelle question
       const historyBeforeNew = [...messages]
@@ -35,7 +36,6 @@ export function useFollowupStream(params: {
 
       try {
         const { url, formData } = getFollowupStreamUrl({
-          userId: params.userId,
           routedSubject: params.routedSubject,
           level: params.level,
           conversationHistory: historyBeforeNew,
@@ -44,6 +44,7 @@ export function useFollowupStream(params: {
 
         const res = await fetch(url, {
           method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` },
           body: formData,
           signal: controller.signal,
         })
@@ -106,7 +107,7 @@ export function useFollowupStream(params: {
         setIsLoading(false)
       }
     },
-    [messages, params]
+    [messages, params, session]
   )
 
   const reset = useCallback(() => {

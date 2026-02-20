@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { Trash2 } from 'lucide-react'
 import { SubjectBadge } from '@/components/shared/subject-badge'
 import { deleteCourse } from '@/lib/api'
-import { useAuthStore } from '@/store/auth.store'
 import { useCoursStore } from '@/store/cours.store'
 import type { CourseListItem } from '@/types'
 
@@ -14,17 +13,16 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course }: CourseCardProps) {
-  const user = useAuthStore((s) => s.user)
   const removeCourse = useCoursStore((s) => s.removeCourse)
   const [deleting, setDeleting] = useState(false)
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (!user || !confirm(`Supprimer "${course.title}" ?`)) return
+    if (!confirm(`Supprimer "${course.title}" ?`)) return
     setDeleting(true)
     try {
-      await deleteCourse(course.id, user.id)
+      await deleteCourse(course.id)
       removeCourse(course.id)
     } catch {
       setDeleting(false)

@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_anon_key: str
     supabase_service_role_key: str
+    supabase_jwt_secret: str  # Settings > API > JWT Secret dans le dashboard Supabase
     environment: str = "development"
     cors_origins: str = "http://localhost:3000"
 

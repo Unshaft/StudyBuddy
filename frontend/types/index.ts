@@ -57,9 +57,15 @@ export interface CorrectionResponse {
   rag_iterations: number
 }
 
+export interface UploadJobResponse {
+  job_id: string
+  status: 'queued' | 'processing' | 'done' | 'error'
+  course?: CourseResponse
+  error?: string
+}
+
 export interface CorrectParams {
   file: File
-  userId: string
   subject?: string
   studentAnswer?: string
 }

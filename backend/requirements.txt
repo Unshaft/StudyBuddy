@@ -18,6 +18,12 @@ langchain-core==0.3.25
 # Supabase
 supabase==2.10.0
 
+# Auth JWT
+python-jose[cryptography]>=3.3.0
+
+# Rate limiting
+slowapi>=0.1.9
+
 # Utilitaires
 python-dotenv==1.0.1
 Pillow==11.0.0

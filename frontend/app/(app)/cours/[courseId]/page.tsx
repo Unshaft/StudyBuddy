@@ -9,24 +9,22 @@ import { SubjectBadge } from '@/components/shared/subject-badge'
 import { MathRenderer } from '@/components/shared/math-renderer'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getCourse } from '@/lib/api'
-import { useAuthStore } from '@/store/auth.store'
 import type { CourseDetail } from '@/lib/api'
 
 export default function CourseDetailPage() {
   const { courseId } = useParams<{ courseId: string }>()
   const router = useRouter()
-  const user = useAuthStore((s) => s.user)
   const [course, setCourse] = useState<CourseDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!user || !courseId) return
-    getCourse(courseId, user.id)
+    if (!courseId) return
+    getCourse(courseId)
       .then(setCourse)
       .catch(() => setError('Cours introuvable.'))
       .finally(() => setLoading(false))
-  }, [courseId, user])
+  }, [courseId])
 
   const date = course
     ? new Date(course.created_at).toLocaleDateString('fr-FR', {

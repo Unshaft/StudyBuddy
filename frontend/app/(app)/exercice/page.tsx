@@ -31,7 +31,6 @@ export default function ExercicePage() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const followup = useFollowupStream({
-    userId: user?.id ?? null,
     routedSubject: state.specialist,
     level: state.level,
   })
@@ -57,10 +56,9 @@ export default function ExercicePage() {
   }
 
   async function handleStart() {
-    if (!file || !user) return
+    if (!file) return
     await startCorrection({
       file,
-      userId: user.id,
       subject: selectedSubject ?? undefined,
     })
   }

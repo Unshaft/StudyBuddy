@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { getCorrectStreamUrl } from '@/lib/api'
+import { useAuthStore } from '@/store/auth.store'
 import type { CorrectionPhase, SSEEvent, CorrectParams, CourseSource } from '@/types'
 
 export interface CorrectionState {
@@ -33,6 +34,7 @@ const INITIAL: CorrectionState = {
 export function useCorrectionStream() {
   const [state, setState] = useState<CorrectionState>(INITIAL)
   const abortRef = useRef<AbortController | null>(null)
+  const session = useAuthStore((s) => s.session)
 
   const reset = useCallback(() => {
     abortRef.current?.abort()
@@ -49,8 +51,13 @@ export function useCorrectionStream() {
     const { url, formData } = getCorrectStreamUrl(params)
 
     try {
+      const authHeaders = session?.access_token
+        ? { Authorization: `Bearer ${session.access_token}` }
+        : {}
+
       const res = await fetch(url, {
         method: 'POST',
+        headers: authHeaders,
         body: formData,
         signal: controller.signal,
       })

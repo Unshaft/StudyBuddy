@@ -10,7 +10,7 @@ import logging
 import uuid
 
 import anthropic
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -24,6 +24,8 @@ from agents.specialists.anglais import AnglaisSpecialist
 from agents.specialists.philosophie import PhilosophieSpecialist
 from agents.nodes.orchestrator import _resolve_subject, _resolve_level, _build_rag_query
 from agents.nodes.evaluator import evaluator_node
+from api.auth import get_current_user_id
+from api.ratelimit import limiter
 from rag.ocr import extract_exercise_from_image
 from rag.retrieval import search_relevant_chunks
 from config import get_settings
@@ -73,11 +75,13 @@ def _validate_image(file: UploadFile, image_bytes: bytes) -> None:
 
 
 @router.post("/correct", response_model=CorrectionResponse)
+@limiter.limit("10/minute")
 async def correct_exercise(
+    request: Request,
     file: UploadFile = File(...),
-    user_id: str = Form(...),
     subject: str = Form(None),
     student_answer: str = Form(None),
+    user_id: str = Depends(get_current_user_id),
 ):
     """
     Correction complète via le graphe LangGraph multi-agent.
@@ -118,11 +122,13 @@ async def correct_exercise(
 
 
 @router.post("/correct/stream")
+@limiter.limit("10/minute")
 async def correct_exercise_stream(
+    request: Request,
     file: UploadFile = File(...),
-    user_id: str = Form(...),
     subject: str = Form(None),
     student_answer: str = Form(None),
+    user_id: str = Depends(get_current_user_id),
 ):
     """
     Correction avec streaming SSE — affichage progressif côté frontend.
@@ -271,12 +277,14 @@ async def correct_exercise_stream(
 
 
 @router.post("/followup/stream")
+@limiter.limit("20/minute")
 async def followup_stream(
-    user_id: str = Form(...),
+    request: Request,
     routed_subject: str = Form(...),
     level: str = Form(...),
     conversation_history: str = Form(...),  # JSON: [{role, content}, ...]
     message: str = Form(...),
+    user_id: str = Depends(get_current_user_id),
 ):
     """
     Conversation de suivi post-correction — human in the loop.

@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { ThumbsUp, ThumbsDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { submitFeedback } from '@/lib/api'
-import { useAuthStore } from '@/store/auth.store'
 import { useHistoryStore } from '@/store/history.store'
 
 interface FeedbackBarProps {
@@ -12,7 +11,6 @@ interface FeedbackBarProps {
 }
 
 export function FeedbackBar({ sessionId }: FeedbackBarProps) {
-  const user = useAuthStore((s) => s.user)
   const updateFeedback = useHistoryStore((s) => s.updateFeedback)
   const [selected, setSelected] = useState<1 | -1 | null>(null)
   const [sending, setSending] = useState(false)
@@ -23,9 +21,7 @@ export function FeedbackBar({ sessionId }: FeedbackBarProps) {
     setSending(true)
     setSelected(rating)
     updateFeedback(sessionId, rating)
-    if (user) {
-      await submitFeedback(sessionId, user.id, rating)
-    }
+    await submitFeedback(sessionId, rating)
     setSending(false)
     setSent(true)
   }

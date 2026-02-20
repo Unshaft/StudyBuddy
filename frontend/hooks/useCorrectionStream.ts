@@ -51,7 +51,7 @@ export function useCorrectionStream() {
     const { url, formData } = getCorrectStreamUrl(params)
 
     try {
-      const authHeaders = session?.access_token
+      const authHeaders: Record<string, string> = session?.access_token
         ? { Authorization: `Bearer ${session.access_token}` }
         : {}
 

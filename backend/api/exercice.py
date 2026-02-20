@@ -241,7 +241,17 @@ async def correct_exercise_stream(
         yield sse({"type": "phase", "phase": "evaluating", "status": "done"})
 
         # ── Finalisation ──────────────────────────────────────────────────────
-        sources = list({f"{c['course_title']} ({c['subject']})" for c in chunks_dicts})
+        seen_ids: set[str] = set()
+        sources = []
+        for c in chunks_dicts:
+            cid = c.get("course_id", "")
+            if cid and cid not in seen_ids:
+                seen_ids.add(cid)
+                sources.append({
+                    "title": c.get("course_title", "Cours"),
+                    "subject": c.get("subject", ""),
+                    "course_id": cid,
+                })
         logger.info("[STREAM] SUCCES session=%s score=%.2f sources=%d", session_id, eval_result.get("evaluation_score", 0), len(chunks_dicts))
         yield sse({
             "type": "done",

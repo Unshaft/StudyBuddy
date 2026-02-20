@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Trash2 } from 'lucide-react'
 import { SubjectBadge } from '@/components/shared/subject-badge'
 import { deleteCourse } from '@/lib/api'
@@ -36,8 +37,11 @@ export function CourseCard({ course }: CourseCardProps) {
   })
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 p-4 flex items-start gap-3 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer">
-      <div className="flex-1 min-w-0">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-200 flex items-start">
+      <Link
+        href={`/cours/${course.id}`}
+        className="flex-1 min-w-0 p-4 pr-2"
+      >
         <p className="font-semibold text-slate-900 text-sm leading-snug truncate">
           {course.title}
         </p>
@@ -52,12 +56,12 @@ export function CourseCard({ course }: CourseCardProps) {
             {course.keywords.slice(0, 4).join(', ')}
           </p>
         )}
-      </div>
+      </Link>
       <button
         onClick={handleDelete}
         disabled={deleting}
         aria-label="Supprimer ce cours"
-        className="p-2 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors duration-150 cursor-pointer flex-shrink-0"
+        className="p-4 pl-2 rounded-r-2xl text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors duration-150 cursor-pointer flex-shrink-0 self-stretch flex items-center"
       >
         <Trash2 className="w-4 h-4" />
       </button>

@@ -102,7 +102,7 @@ export default function ExercicePage() {
         level: state.level ?? '',
         exerciseStatement: '',
         correction: state.tokens,
-        sources: state.sources,
+        sources: state.sources.map((s) => `${s.title} (${s.subject})`),
         evaluationScore: state.evaluationScore,
         feedback: null,
       })

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { getCorrectStreamUrl } from '@/lib/api'
-import type { CorrectionPhase, SSEEvent, CorrectParams } from '@/types'
+import type { CorrectionPhase, SSEEvent, CorrectParams, CourseSource } from '@/types'
 
 export interface CorrectionState {
   phase: CorrectionPhase
@@ -10,7 +10,7 @@ export interface CorrectionState {
   subject: string | null
   level: string | null
   specialist: string | null
-  sources: string[]
+  sources: CourseSource[]
   chunksFound: number
   evaluationScore: number
   sessionId: string | null

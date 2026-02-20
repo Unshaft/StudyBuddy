@@ -88,10 +88,16 @@ export interface SSETokenEvent {
   text: string
 }
 
+export interface CourseSource {
+  title: string
+  subject: string
+  course_id: string
+}
+
 export interface SSEDoneEvent {
   type: 'done'
   session_id: string
-  sources: string[]
+  sources: CourseSource[]
   evaluation_score: number
   chunks_found?: number
 }

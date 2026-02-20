@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { Bot, Search, BookOpen, Sparkles, CheckCircle, AlertCircle, FileText } from 'lucide-react'
 import { MathRenderer } from '@/components/shared/math-renderer'
 import { FeedbackBar } from './feedback-bar'
 import { SubjectBadge } from '@/components/shared/subject-badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import type { CorrectionPhase } from '@/types'
+import type { CorrectionPhase, CourseSource } from '@/types'
 
 interface PhaseStep {
   id: CorrectionPhase
@@ -30,7 +31,7 @@ export interface CorrectionStreamProps {
   subject: string | null
   level: string | null
   specialist: string | null
-  sources: string[]
+  sources: CourseSource[]
   evaluationScore: number
   sessionId: string | null
   error: string | null
@@ -237,8 +238,8 @@ export function CorrectionStream({
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">
                 Basé sur tes cours
               </p>
-              {sources.map((src, i) => (
-                <InlineSourceCard key={i} source={src} index={i} />
+              {sources.map((src) => (
+                <InlineSourceCard key={src.course_id} source={src} />
               ))}
             </div>
           )}
@@ -286,18 +287,22 @@ function ClosingQuestion({ onFollowup }: { onFollowup: (understood: boolean) => 
 
 // ── Source card ───────────────────────────────────────────────────────────────
 
-function InlineSourceCard({ source, index }: { source: string; index: number }) {
+function InlineSourceCard({ source }: { source: CourseSource }) {
   return (
-    <div className="flex items-start gap-2.5 bg-indigo-50/60 border border-indigo-100 rounded-xl p-3">
-      <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+    <Link
+      href={`/cours/${source.course_id}`}
+      className="flex items-center gap-2.5 bg-indigo-50/60 border border-indigo-100 rounded-xl p-3 hover:bg-indigo-50 transition-colors duration-150"
+    >
+      <div className="w-7 h-7 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
         <FileText className="w-3.5 h-3.5 text-indigo-600" strokeWidth={2} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-semibold text-indigo-600 uppercase tracking-wider mb-0.5">
-          Cours utilisé {index + 1}
+        <p className="text-[10px] font-semibold text-indigo-500 uppercase tracking-wider">
+          Cours utilisé
         </p>
-        <p className="text-xs text-slate-700 leading-relaxed line-clamp-3">{source}</p>
+        <p className="text-xs font-medium text-slate-800 truncate">{source.title}</p>
       </div>
-    </div>
+      <SubjectBadge subject={source.subject} />
+    </Link>
   )
 }

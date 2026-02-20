@@ -11,11 +11,9 @@ import { RotateCcw, Send } from 'lucide-react'
 import { Bot } from 'lucide-react'
 import { useCorrectionStream } from '@/hooks/useCorrectionStream'
 import { useFollowupStream } from '@/hooks/useFollowupStream'
-import { useAuthStore } from '@/store/auth.store'
 import { useHistoryStore } from '@/store/history.store'
 
 export default function ExercicePage() {
-  const user = useAuthStore((s) => s.user)
   const addEntry = useHistoryStore((s) => s.addEntry)
 
   const { state, startCorrection, reset } = useCorrectionStream()

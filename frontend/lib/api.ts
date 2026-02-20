@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase'
 import type {
-  CourseResponse,
   CourseListItem,
   CorrectionResponse,
   CorrectParams,

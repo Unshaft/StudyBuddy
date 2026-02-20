@@ -129,15 +129,17 @@ studybuddy/
 │   └── package.json
 │
 ├── backend/                     # FastAPI — Python
-│   ├── main.py                  # App FastAPI, CORS, routers (cours + exercice)
-│   ├── config.py                # Settings pydantic-settings
+│   ├── main.py                  # App FastAPI, CORS, slowapi, routers (cours + exercice + feedback)
+│   ├── config.py                # Settings pydantic-settings (incl. supabase_jwt_secret)
 │   ├── requirements.txt
 │   ├── .env.example
 │   ├── api/
 │   │   ├── __init__.py
-│   │   ├── cours.py             # POST /upload (sync), GET /, DELETE /{id}
-│   │   ├── exercice.py          # POST /correct, POST /correct/stream (SSE)
-│   │   └── feedback.py          # POST /feedback — À CRÉER (table prête en migration 004)
+│   │   ├── auth.py              # Dépendance JWT — get_current_user_id() via Depends()
+│   │   ├── ratelimit.py         # Instance slowapi partagée — limiter singleton
+│   │   ├── cours.py             # POST /upload (async+polling), GET /jobs/{id}, GET /, GET /{id}, DELETE /{id}
+│   │   ├── exercice.py          # POST /correct, POST /correct/stream (SSE), POST /followup/stream
+│   │   └── feedback.py          # POST /feedback — implémenté (migration 004 créée)
 │   ├── rag/
 │   │   ├── __init__.py
 │   │   ├── ocr.py               # Claude Vision → OCRCourseResult / OCRExerciseResult
@@ -336,14 +338,35 @@ CREATE TABLE usage_quotas (
 - JWT Supabase avec `exp` 1h
 - Refresh automatique via `supabase-js` (client-side)
 - Côté SSR : `@supabase/ssr` pour cookies sécurisés
-- Le backend reçoit le JWT dans `Authorization: Bearer <token>` (phase 2, actuellement `user_id` en form field)
+- Le backend reçoit le JWT dans `Authorization: Bearer <token>` — **implémenté** via `get_current_user_id()`
 
-### Sécurité côté backend (phase 2)
+### Sécurité côté backend — implémentée
 
 ```python
-# Middleware d'authentification à ajouter en phase 2
-# Vérifier le JWT Supabase dans Authorization header
-# Extraire user_id depuis le payload au lieu de le recevoir en form field
+# backend/api/auth.py
+from jose import jwt, JWTError
+
+async def get_current_user_id(
+    authorization: str = Header(..., alias="Authorization"),
+) -> str:
+    """Extrait et valide le user_id depuis le JWT Supabase (HS256)."""
+    token = authorization.split(" ", 1)[1]
+    payload = jwt.decode(token, settings.supabase_jwt_secret,
+                         algorithms=["HS256"], options={"verify_aud": False})
+    return payload["sub"]   # UUID de l'utilisateur
+```
+
+Toutes les routes utilisent `user_id: str = Depends(get_current_user_id)`.
+Le `user_id` n'est **plus jamais** accepté en `Form(...)` ou query param.
+
+Le frontend envoie le token via `lib/api.ts` :
+
+```typescript
+// Récupère la session Supabase et construit l'en-tête Authorization
+async function getAuthHeader(): Promise<string> {
+  const { data: { session } } = await createClient().auth.getSession()
+  return `Bearer ${session!.access_token}`
+}
 ```
 
 ---
@@ -356,10 +379,11 @@ Toutes les settings sont dans `Settings(BaseSettings)` chargées depuis `.env` :
 
 | Setting | Valeur par défaut | Description |
 | --- | --- | --- |
+| `supabase_jwt_secret` | — | JWT Secret du dashboard Supabase (Settings › API) |
 | `vision_model` | `claude-sonnet-4-6` | Modèle OCR |
 | `correction_model` | `claude-sonnet-4-6` | Modèle correction |
-| `embedding_model` | `text-embedding-3-small` | Modèle embeddings OpenAI |
-| `embedding_dimensions` | 1536 | Dimensions vecteur |
+| `embedding_model` | `voyage-3` | Modèle embeddings Voyage AI |
+| `embedding_dimensions` | 1024 | Dimensions vecteur |
 | `chunk_size` | 800 | Taille chunk (tokens) |
 | `chunk_overlap` | 100 | Chevauchement chunks |
 | `retrieval_top_k` | 5 | Chunks RAG initial |
@@ -369,41 +393,85 @@ Toutes les settings sont dans `Settings(BaseSettings)` chargées depuis `.env` :
 | `evaluator_max_tokens` | 512 | Tokens max évaluation |
 | `max_rag_iterations` | 2 | Re-queries max par session |
 
+### Authentification des routes
+
+Toutes les routes (sauf `/health`) utilisent la dépendance `get_current_user_id` :
+
+```python
+from api.auth import get_current_user_id
+user_id: str = Depends(get_current_user_id)
+```
+
+Le `user_id` n'est **jamais** passé en `Form(...)` ou query param — il est toujours extrait du JWT.
+
+### Rate limiting
+
+Implémenté via `slowapi` (`api/ratelimit.py` — instance partagée) :
+
+| Route | Limite |
+| --- | --- |
+| `POST /api/cours/upload` | 5 req/min par IP |
+| `POST /api/exercice/correct` | 10 req/min par IP |
+| `POST /api/exercice/correct/stream` | 10 req/min par IP |
+| `POST /api/exercice/followup/stream` | 20 req/min par IP |
+
+Dépassement → HTTP 429.
+
 ### Routes API
 
-#### `POST /api/cours/upload`
+#### `POST /api/cours/upload` — **asynchrone**
 
-Upload une photo de cours → OCR → vectorisation → stockage.
+Upload une photo de cours. Retourne immédiatement sans attendre le traitement.
 
-- **Input :** `file` (UploadFile), `user_id` (Form)
+- **Auth :** JWT requis (`Authorization: Bearer <token>`)
+- **Rate limit :** 5/min
+- **Input :** `file` (UploadFile multipart)
 - **Formats acceptés :** JPEG, PNG, WEBP, HEIC/HEIF (max 10 MB)
-- **Output :** `CourseResponse` (id, title, subject, level, keywords, chunk_count, created_at)
-- **Pipeline :** `extract_course_from_image()` → `chunk_course_text()` → `embed_chunks()` → `store_chunks()`
+- **Output :** `UploadJobResponse { job_id, status: "queued" }`
+- **Pipeline (BackgroundTask) :** OCR → chunking → embedding → stockage pgvector → `_JOBS[job_id] = { status: "done", course: ... }`
+
+#### `GET /api/cours/jobs/{job_id}` — **polling**
+
+Retourne le statut d'un job d'upload en cours.
+
+- **Auth :** JWT requis
+- **Output :** `UploadJobResponse { job_id, status, course?, error? }`
+- **Statuts :** `queued` → `processing` → `done` | `error`
+- **Usage :** frontend poll toutes les 2s jusqu'à `status === "done"`
 
 #### `GET /api/cours/`
 
-Liste les cours d'un utilisateur, triés par date décroissante.
+Liste les cours de l'utilisateur authentifié, triés par date décroissante.
 
-- **Input :** `user_id` (query param)
+- **Auth :** JWT requis
 - **Output :** `list[CourseListItem]`
+
+#### `GET /api/cours/{course_id}`
+
+Retourne le détail complet d'un cours (avec `raw_content`).
+
+- **Auth :** JWT requis (vérifie `user_id = auth.sub`)
+- **Output :** `CourseDetail` (id, title, subject, level, keywords, raw_content, created_at)
 
 #### `DELETE /api/cours/{course_id}`
 
 Supprime un cours et tous ses chunks vectorisés (CASCADE).
 
-- **Input :** `course_id` (path), `user_id` (query param)
-- **Vérification propriété :** query `courses WHERE id=? AND user_id=?`
+- **Auth :** JWT requis (vérifie `user_id = auth.sub`)
 
 #### `POST /api/exercice/correct`
 
 Correction complète via graphe LangGraph (réponse JSON synchrone).
 
-- **Input :** `file` (UploadFile), `user_id`, `subject` (override optionnel), `student_answer` (optionnel)
+- **Auth :** JWT requis — **Rate limit :** 10/min
+- **Input :** `file` (UploadFile), `subject` (override optionnel), `student_answer` (optionnel)
 - **Output :** `CorrectionResponse` (session_id, exercise_statement, subject, level, exercise_type, specialist_used, correction, sources_used, chunks_found, evaluation_score, rag_iterations)
 
 #### `POST /api/exercice/correct/stream`
 
 Correction avec streaming SSE — affichage progressif côté frontend.
+
+- **Auth :** JWT requis — **Rate limit :** 10/min
 
 **Séquence d'events garantie :**
 
@@ -416,8 +484,10 @@ Correction avec streaming SSE — affichage progressif côté frontend.
 {"type": "phase", "phase": "specialist", "status": "running", "specialist": "mathematiques", "level": "3ème"}
 {"type": "token", "text": "..."}
 {"type": "phase", "phase": "evaluating", "status": "done"}
-{"type": "done", "session_id": "...", "sources": [...], "evaluation_score": 0.85}
+{"type": "done", "session_id": "...", "sources": [{"title":"...", "subject":"...", "course_id":"..."}], "evaluation_score": 0.85}
 ```
+
+**Sources structurées :** le champ `sources` est `CourseSource[]` (titre + matière + course_id), pas une liste de strings. Permet de créer des source cards cliquables vers `/cours/[course_id]`.
 
 **En cas d'erreur :**
 
@@ -425,6 +495,23 @@ Correction avec streaming SSE — affichage progressif côté frontend.
 {"type": "error", "code": "OCR_FAILED", "message": "..."}
 {"type": "error", "code": "OCR_EMPTY", "message": "..."}
 ```
+
+#### `POST /api/exercice/followup/stream`
+
+Conversation de suivi post-correction (human-in-the-loop).
+
+- **Auth :** JWT requis — **Rate limit :** 20/min
+- **Input :** `routed_subject`, `level`, `conversation_history` (JSON), `message`
+- L'élève pose une question de clarification ; le spécialiste répond en s'appuyant sur un nouveau RAG query
+
+#### `POST /api/feedback`
+
+Enregistre un retour 👍/👎 sur une correction.
+
+- **Auth :** JWT requis
+- **Input :** `{ session_id, rating (1 ou -1), comment? }` (JSON body)
+- **Output :** `{ status: "ok" }` (HTTP 201)
+- **Stockage :** table `correction_feedback` (migration 004)
 
 #### `GET /health`
 
@@ -566,8 +653,9 @@ Chaque spécialiste a un system prompt adapté à sa matière et à la pédagogi
 | `/login` | Connexion email/password | Non | ✅ |
 | `/register` | Inscription | Non | ✅ |
 | `/cours` | Liste des cours + stats bar | Oui | ✅ |
-| `/cours/upload` | Upload photo (caméra/galerie) + OCR | Oui | ✅ |
-| `/exercice` | Capture énoncé + correction SSE | Oui | ✅ |
+| `/cours/upload` | Upload photo (caméra/galerie) + polling async | Oui | ✅ |
+| `/cours/[courseId]` | Détail d'un cours (raw_content + KaTeX) | Oui | ✅ |
+| `/exercice` | Capture énoncé + correction SSE + followup | Oui | ✅ |
 | `/exercice/[sessionId]` | Détail correction passée (IndexedDB) | Oui | ✅ |
 | `/historique` | Historique corrections offline | Oui | ✅ |
 | `/cours/chapitre/[id]` | Détail d'un chapitre | Oui | Phase 2 |
@@ -638,23 +726,64 @@ interface HistoryStore {
 
 ### Client API (`lib/api.ts`)
 
+Toutes les fonctions ajoutent automatiquement `Authorization: Bearer <token>` via `getAuthHeader()`.
+**Aucun `userId` n'est passé en paramètre** — le backend l'extrait du JWT.
+
 ```typescript
 const API_URL = process.env.NEXT_PUBLIC_API_URL; // ex: https://api.studybuddy.fr
 
-// Upload cours
-export async function uploadCourse(file: File, userId: string): Promise<CourseResponse>
+// Helper interne — récupère le token depuis la session Supabase
+async function getAuthHeader(): Promise<string>
 
-// Liste cours
-export async function listCourses(userId: string): Promise<CourseListItem[]>
+// Upload cours (asynchrone — retourne un job_id immédiatement)
+export async function uploadCourse(file: File): Promise<UploadJobResponse>
+
+// Polling du statut d'un job d'upload
+export async function getUploadJob(jobId: string): Promise<UploadJobResponse>
+
+// Détail d'un cours (raw_content inclus)
+export async function getCourse(courseId: string): Promise<CourseDetail>
+
+// Liste cours de l'utilisateur connecté
+export async function listCourses(): Promise<CourseListItem[]>
 
 // Supprimer cours
-export async function deleteCourse(courseId: string, userId: string): Promise<void>
+export async function deleteCourse(courseId: string): Promise<void>
 
-// Correction (JSON)
+// Correction (JSON synchrone)
 export async function correctExercise(params: CorrectParams): Promise<CorrectionResponse>
 
-// Correction streaming (SSE)
-export function correctExerciseStream(params: CorrectParams): EventSource
+// Correction streaming — retourne URL + FormData pour fetch() manuel
+export function getCorrectStreamUrl(params: CorrectParams): { url: string; formData: FormData }
+
+// Followup streaming — retourne URL + FormData pour fetch() manuel
+export function getFollowupStreamUrl(params: FollowupParams): { url: string; formData: FormData }
+
+// Feedback 👍/👎 (best-effort — ne throw jamais)
+export async function submitFeedback(sessionId: string, rating: 1 | -1, comment?: string): Promise<void>
+```
+
+Types clés :
+
+```typescript
+interface UploadJobResponse {
+  job_id: string
+  status: 'queued' | 'processing' | 'done' | 'error'
+  course?: CourseResponse
+  error?: string
+}
+
+interface CourseSource {
+  title: string
+  subject: string
+  course_id: string   // permet de naviguer vers /cours/[course_id]
+}
+
+interface CorrectParams {
+  file: File
+  subject?: string       // override optionnel de la matière détectée
+  studentAnswer?: string
+}
 ```
 
 ### Hook `useCorrectionStream`
@@ -662,11 +791,11 @@ export function correctExerciseStream(params: CorrectParams): EventSource
 ```typescript
 interface CorrectionState {
   phase: 'idle' | 'ocr' | 'rag' | 'specialist' | 'evaluating' | 'done' | 'error';
-  tokens: string;           // tokens accumulés
+  tokens: string;              // tokens accumulés (texte brut markdown+KaTeX)
   subject: string | null;
   level: string | null;
   specialist: string | null;
-  sources: string[];
+  sources: CourseSource[];     // sources structurées avec course_id (cliquables)
   chunksFound: number;
   evaluationScore: number;
   sessionId: string | null;
@@ -674,7 +803,22 @@ interface CorrectionState {
 }
 ```
 
-Implémentation : `fetch()` + `ReadableStream` (pas EventSource — permet POST multipart).
+- Implémentation : `fetch()` + `ReadableStream` (pas EventSource — permet POST multipart)
+- L'en-tête `Authorization` est ajouté depuis `useAuthStore((s) => s.session)`
+
+### Hook `useFollowupStream`
+
+Gère la conversation de suivi post-correction (human-in-the-loop).
+
+```typescript
+useFollowupStream(params: {
+  routedSubject: string | null
+  level: string | null
+})
+// → { messages, isLoading, sendMessage, reset }
+```
+
+- Ne prend plus `userId` en paramètre — authentification via `session.access_token` du store
 
 ### PWA (Progressive Web App)
 
@@ -775,20 +919,48 @@ Les corrections de maths, physique-chimie et SVT contiennent des formules. Le te
 - **Composant `MathRenderer`** : parse le texte token par token pendant le streaming, détecte les délimiteurs, rend les formules au fur et à mesure
 - **Formules chimiques** (SVT, Chimie) : utiliser `mhchem` (extension KaTeX) pour `\ce{H2O}`, `\ce{CO2}`
 
-### Upload asynchrone (queue)
+### Upload asynchrone (implémenté)
 
-L'OCR + embedding d'un cours prend 5-15s. Une réponse HTTP synchrone risque le timeout mobile.
+L'OCR + embedding d'un cours prend 5-15s. L'upload est asynchrone pour éviter le timeout mobile.
 
-**Architecture :**
+#### Architecture retenue : FastAPI BackgroundTasks + dict in-memory
 
-1. `POST /api/cours/upload` retourne immédiatement `{ job_id, status: "processing" }`
-2. Un worker asynchrone (Celery + Redis, ou Supabase Edge Function) traite l'OCR + embedding
-3. Le frontend poll `GET /api/cours/jobs/{job_id}` toutes les 2s (ou SSE dédié)
-4. Quand `status: "done"` → afficher le cours dans la liste
+Acceptable pour un déploiement single-instance (Railway MVP). Les jobs sont courts-lived (< 30s) ; une perte sur restart force un retry côté utilisateur.
 
-**Statuts du job :**
+#### Flux complet
 
-- `queued` → `ocr_running` → `embedding_running` → `done` | `error`
+```text
+POST /api/cours/upload
+  → validation image (type + taille)
+  → job_id = uuid4()
+  → _JOBS[job_id] = { status: "queued" }
+  → BackgroundTasks.add_task(_process_upload, job_id, image_bytes, user_id)
+  → retourne immédiatement { job_id, status: "queued" }   (HTTP 202)
+
+_process_upload() [background] :
+  → OCR Claude Vision
+  → INSERT courses (Supabase)
+  → chunk_course_text()
+  → embed_chunks() (Voyage AI)
+  → store_chunks() (pgvector)
+  → _JOBS[job_id] = { status: "done", course: CourseResponse }
+  → en cas d'erreur : _JOBS[job_id] = { status: "error", error: "..." }
+
+GET /api/cours/jobs/{job_id}   ← poll toutes les 2s
+  → retourne UploadJobResponse { job_id, status, course?, error? }
+```
+
+**Statuts du job :** `queued` → `processing` → `done` | `error`
+
+**Frontend (`CourseUploader`) :**
+
+1. Appel `uploadCourse(file)` → reçoit `{ job_id }` immédiatement
+2. Lance `pollJob(job_id)` toutes les 2s via `setTimeout`
+3. Affiche un label progressif selon le temps écoulé :
+   - 0–5s : "Lecture du cours..."
+   - 5–12s : "Vectorisation en cours..."
+   - 12s+ : "Finalisation..."
+4. Quand `status === "done"` → ajoute le cours en tête de liste, affiche l'écran "Succès"
 
 ### Mobile UX spécifique
 
@@ -849,13 +1021,17 @@ async def check_quota(user_id: str, action: str) -> None:
 # Anthropic (OCR + correction + évaluation)
 ANTHROPIC_API_KEY=sk-ant-...
 
-# OpenAI (embeddings uniquement)
-OPENAI_API_KEY=sk-...
+# Voyage AI (embeddings)
+VOYAGE_API_KEY=pa-...
 
 # Supabase
 SUPABASE_URL=https://xxxx.supabase.co
 SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
+
+# JWT Secret Supabase — Settings › API › JWT Secret dans le dashboard
+# Utilisé pour vérifier les tokens des utilisateurs côté backend
+SUPABASE_JWT_SECRET=your-supabase-jwt-secret
 
 # CORS
 CORS_ORIGINS=http://localhost:3000,https://studybuddy.vercel.app
@@ -881,8 +1057,8 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ### Variables de production à configurer
 
 - **Vercel** : `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- **Railway/Render** : toutes les variables du backend
-- **Supabase** : activé en production avec pgvector, Storage bucket `course-images`
+- **Railway/Render** : toutes les variables du backend (dont `SUPABASE_JWT_SECRET`, `VOYAGE_API_KEY`)
+- **Supabase** : activé en production avec pgvector, Storage bucket `course-images`, migrations 001–004 appliquées
 
 ---
 
@@ -907,9 +1083,14 @@ uvicorn main:app --reload  # http://localhost:8000
 
 # ── Supabase local ────────────────────────────────────────────
 supabase start             # Lance la stack locale
-supabase db reset          # Reapplique toutes les migrations
+supabase db reset          # Reapplique toutes les migrations (001→004)
 supabase migration new <nom>  # Crée une nouvelle migration
 supabase db push           # Push migrations vers le projet remote
+
+# ── Icônes PWA ────────────────────────────────────────────────
+cd frontend/public/icons
+pip install Pillow
+python generate_icons.py   # Génère icon-192.png et icon-512.png
 
 # ── Tests (à implémenter) ─────────────────────────────────────
 cd backend
@@ -993,12 +1174,14 @@ pytest tests/test_rag.py -v   # Tests unitaires RAG
 ## 14. Lancer le MVP (checklist)
 
 ```bash
-# 1. Supabase — appliquer les migrations
+# 1. Supabase — appliquer les migrations 001 → 004
 supabase db push   # ou supabase db reset en local
 
 # 2. Backend
 cp backend/.env.example backend/.env
-# → Remplir ANTHROPIC_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+# → Remplir ANTHROPIC_API_KEY, VOYAGE_API_KEY
+# → Remplir SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET
+# → (JWT Secret : dashboard Supabase › Settings › API › JWT Secret)
 cd backend && pip install -r requirements.txt
 uvicorn main:app --reload   # → http://localhost:8000/docs
 
@@ -1008,17 +1191,24 @@ cp frontend/.env.local.example frontend/.env.local
 # → NEXT_PUBLIC_API_URL=http://localhost:8000
 cd frontend && npm install && npm run dev   # → http://localhost:3000
 
-# 4. Générer les icônes PWA (requis pour manifest)
-# Créer public/icons/icon-192.png et icon-512.png (logo StudyBuddy)
+# 4. Générer les icônes PWA
+cd frontend/public/icons && python generate_icons.py
+# → Crée icon-192.png et icon-512.png
 ```
 
 **Ce qui fonctionnera au premier lancement :**
+
 - ✅ Inscription / connexion
-- ✅ Upload d'un cours (synchrone, 5–15s selon OCR)
+- ✅ Upload d'un cours (asynchrone — polling toutes les 2s, barre de progression)
 - ✅ Correction d'exercice avec streaming SSE
+- ✅ Conversation de suivi post-correction (human-in-the-loop)
 - ✅ Affichage LaTeX (maths, physique)
-- ✅ Historique offline
-- ⚠️ Feedback 👍/👎 : enregistré localement, POST backend silencieusement ignoré (endpoint manquant)
+- ✅ Source cards cliquables → détail du cours utilisé
+- ✅ Historique offline (IndexedDB)
+- ✅ Feedback 👍/👎 — enregistré localement ET envoyé au backend (`/api/feedback`)
+- ✅ Auth JWT sécurisée — `user_id` extrait du token, jamais en form field
+- ✅ Rate limiting actif (5/min upload, 10/min correction)
+- ⚠️ Icônes PWA : générer avec `generate_icons.py` (placeholders indigo "SB" en attendant le vrai logo)
 
 ---
 
@@ -1031,31 +1221,36 @@ cd frontend && npm install && npm run dev   # → http://localhost:3000
 - [x] Architecture FastAPI + Supabase
 - [x] Pipeline RAG (OCR → chunking → embedding → retrieval)
 - [x] Graphe LangGraph multi-agent (7 spécialistes)
-- [x] API cours (upload synchrone, liste, suppression)
+- [x] API cours (upload **asynchrone** + polling, liste, détail, suppression)
 - [x] API exercice (correction JSON + streaming SSE)
-- [x] Migrations SQL 001 + 002 (pgvector, RLS, agent_sessions)
+- [x] API followup stream (human-in-the-loop post-correction)
+- [x] API feedback (`POST /api/feedback` — table `correction_feedback`)
+- [x] **Auth JWT** — `get_current_user_id()` via `python-jose`, `Depends()` sur toutes les routes
+- [x] **Rate limiting** — `slowapi` (5/min upload, 10/min correction, 20/min followup)
+- [x] Migrations SQL 001 + 002 + 004 (pgvector, RLS, agent_sessions, correction_feedback)
 
 **Frontend ✅ fait :**
 
 - [x] Setup Next.js 14 + routing App Router + shadcn/ui + Tailwind
 - [x] Authentification (login / register / auth guard SSR)
-- [x] Flux cours : liste + stats bar + upload (caméra/galerie)
+- [x] Flux cours : liste + stats bar + upload **asynchrone** (polling 2s, barre de progression)
+- [x] Page détail cours (`/cours/[courseId]` — raw_content + KaTeX)
 - [x] Flux exercice : ExerciseCapture (viewfinder) + CorrectionStream SSE (chat-style)
+- [x] Human-in-the-loop — conversation de suivi post-correction
+- [x] Sources structurées (`CourseSource[]`) — source cards cliquables vers le cours
 - [x] Rendu LaTeX avec KaTeX (`MathRenderer`)
-- [x] `FeedbackBar` (👍/👎) — local + appel backend best-effort
+- [x] `FeedbackBar` (👍/👎) — local + envoi JWT-authentifié au backend
 - [x] Historique offline (IndexedDB via `idb-keyval`)
 - [x] PWA manifest + Service Worker (next-pwa)
+- [x] **Auth JWT frontend** — toutes les requêtes API envoient `Authorization: Bearer <token>`
+- [x] UX/a11y — touch targets 44px, `aria-current`, `focus-visible`, `role="alert"`, `aria-hidden`
 - [x] Build propre (0 erreurs TypeScript + ESLint)
 
 **Avant mise en production :**
 
-- [ ] Générer les icônes PWA (`public/icons/icon-192.png`, `icon-512.png`)
-- [ ] Middleware JWT Supabase backend (extraire `user_id` du token)
-- [ ] Rate limiting `slowapi` (10 req/min `/correct`, 5 req/min `/upload`)
-- [ ] Upload asynchrone — job queue + polling (éviter timeout mobile)
-- [ ] Endpoint `POST /api/feedback` + migration 004 `correction_feedback`
+- [ ] Générer les icônes PWA réelles (logo définitif → remplacer placeholders "SB")
 - [ ] Tests E2E Playwright (flux upload + flux correction)
-- [ ] Déploiement (Vercel + Railway/Render + Supabase prod)
+- [ ] Déploiement final (Vercel + Railway + Supabase prod + migrations appliquées)
 
 ### Phase 2 — Croissance
 
